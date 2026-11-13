@@ -8,3 +8,7 @@
 "file:śled.toml" = "the work of this place, one zapis per krok"
 "dir:pračytańnie" = "the readings of this place, one file per language"
 "file:pračytańnie/en.toml" = "the readings of this place in English"
+"file:README.md" = "what Ramonak is, for people and agents outside Plyń"
+"file:LICENSE" = "the MIT License of the engine"
+"dir:docs" = "the design of the engine"
+"file:docs/architecture.md" = "the architecture of the first slice and the seams for growth: kernel and modules, data, operations, agents through Klučnik, rendering and SEO, translation, queue, releases"

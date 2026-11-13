@@ -6,3 +6,7 @@ kola = "usie"
 "file:śled.toml" = { faza = "ściah", rola = "ruch" }
 "dir:pračytańnie" = { faza = "ściah", rola = "prajava" }
 "file:pračytańnie/en.toml" = { faza = "ściah", rola = "prajava" }
+"file:README.md" = { faza = "dadzienaść", rola = "sens" }
+"file:LICENSE" = { faza = "dadzienaść", rola = "prajava" }
+"dir:docs" = { faza = "dadzienaść", rola = "sens" }
+"file:docs/architecture.md" = { faza = "dadzienaść", rola = "sens" }

@@ -28,3 +28,9 @@ adras = [2, 1]
 "čakańnie" = "A test installation of Ramonak, with noindex, serves michalevic.org from its database in be, ru and en: a page with no edited translation is served as a machine translation and an edited one replaces it; every address Google indexed answers 200 or 301 to its new page; an agent publishes and rolls back a page through the tool site of the Legal Status Klučnik, with the history kept; its pages pass the Prastora check and score 100 in Lighthouse SEO."
 "mieryła" = "ahient"
 "upeŭnienaść" = 0.5
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "The architecture of the first slice written in docs/architecture.md: PHP 8.2 with no framework, Twig, MariaDB with SQLite for tests; a kernel that composes modules declared in module.php and refuses conflicting claims; immutable item versions with origin (source, edited, machine) and publications as the only public state, rollback as a new publication; kinds of content declared in the site's repository; operations shared by agents, a later administration and an API, each change with an event; agents act through a tool site of the frame's Klučnik, which signs requests and passes the member's level; the SEO contract and noindex on experimental installations by default; machine translation through Klučnik's model route, stopped by an edited version and marking it stale on a newer source; releases switched by a symlink through Klučnik's hosting connection. The connections it needs were added to Klučnik first: Google (plyn-one/plyn.klucnik whole 89), DNS and cPanel hosting (whole 95)."
