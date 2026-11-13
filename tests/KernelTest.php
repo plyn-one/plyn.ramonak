@@ -163,6 +163,19 @@ final class KernelTest extends TestCase
         $this->assertTrue($this->op('content.read', ['item' => 'asylum'])['languages']['en']['latest']['stale'], 'the edited translation is marked stale');
     }
 
+    public function testAnyLanguageCanBeTheSourceAndTheOthersAreTranslated(): void
+    {
+        $this->op('content.create', ['item' => 'interview', 'kind' => 'page', 'lang' => 'en', 'path' => '/en/interview']);
+        $published = $this->op('content.save', ['item' => 'interview', 'lang' => 'en', 'fields' => ['title' => 'Interview'], 'publish' => true]);
+        $this->assertSame('source', $published['origin'], 'the first text of an item is its source, in whatever language');
+        $this->assertSame(['ru', 'be'], $published['publication']['translations_queued']);
+        $this->k->queue->run($this->k->jobHandlers());
+        $this->assertStringContainsString('[ru] Interview', $this->get('/interview')->body, 'the Russian path is the source path without its prefix');
+        $this->assertStringContainsString('[be] Interview', $this->get('/be/interview')->body);
+        $ru = $this->op('content.save', ['item' => 'interview', 'lang' => 'ru', 'fields' => ['title' => 'Интервью']]);
+        $this->assertSame('edited', $ru['origin'], 'a text in another language is a translation');
+    }
+
     public function testExperimentalInstallationIsClosedToIndexing(): void
     {
         $this->page('home', 'home', '/', ['title' => 'Бюро']);

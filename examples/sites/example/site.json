@@ -5,7 +5,7 @@
   "indexable": true,
   "domains": {"example.test": "primary", "www.example.test": "alias"},
   "languages": [
-    {"lang": "ru", "prefix": "", "machine": false},
+    {"lang": "ru", "prefix": ""},
     {"lang": "be", "prefix": "be"},
     {"lang": "en", "prefix": "en"}
   ],

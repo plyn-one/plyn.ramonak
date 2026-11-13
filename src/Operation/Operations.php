@@ -161,7 +161,10 @@ final class Operations
     {
         $item = $this->content->item($site, (string) self::need($input, 'item'));
         $lang = (string) self::need($input, 'lang');
-        $origin = (string) ($input['origin'] ?? ($lang === $site->defaultLanguage ? 'source' : 'edited'));
+        // the source language is the item's own: the language its first text was written in, whichever it is; a text in another
+        // language is a translation (edited), unless the caller says it is now the source
+        $source = $this->content->latestSource((int) $item['id']);
+        $origin = (string) ($input['origin'] ?? ($source === null || $source['lang'] === $lang ? 'source' : 'edited'));
         if ($origin === 'machine') {
             throw new OperationError('origin_invalid', 'A machine version is written by the translation job only');
         }

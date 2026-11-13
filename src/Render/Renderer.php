@@ -83,7 +83,7 @@ final class Renderer
             $title .= ' | ' . $site->name($lang);
         }
         return ['title' => $title, 'description' => (string) ($fields['description'] ?? ''), 'canonical' => $site->url($path),
-            'alternates' => count($alternates) > 1 ? $alternates : [], 'x_default' => count($alternates) > 1 ? $default : null,
+            'alternates' => count($alternates) > 1 ? $alternates : [], 'x_default' => count($alternates) > 1 ? ($default ?? $alternates[0]['url']) : null,
             'indexable' => $site->indexable && !$this->experimental, 'locale' => $lang];
     }
 
