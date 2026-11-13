@@ -28,6 +28,8 @@ final class Operations
         'publication.publish' => ['davierany', 'publish', true],
         'publication.rollback' => ['davierany', 'rollback', true],
         'publication.unpublish' => ['davierany', 'unpublish', true],
+        'publication.schedule' => ['davierany', 'schedule', true],
+        'publication.unschedule' => ['davierany', 'unschedule', true],
         'review.add' => ['supracoŭnik', 'reviewAdd', true],
         'route.set' => ['davierany', 'routeSet', true],
         'route.list' => ['supracoŭnik', 'routeList', false],
@@ -185,6 +187,9 @@ final class Operations
 
     private function publish(Site $site, Actor $actor, array $input): array
     {
+        if (isset($input['at'])) {
+            return $this->schedule($site, $actor, $input);
+        }
         $item = $this->content->item($site, (string) self::need($input, 'item'));
         $lang = (string) self::need($input, 'lang');
         $version = isset($input['version']) ? (int) $input['version'] : (int) ($this->content->latest((int) $item['id'], $lang)['id'] ?? 0);
@@ -196,16 +201,57 @@ final class Operations
 
     private function publishVersion(Site $site, Actor $actor, array $item, string $lang, int $version): array
     {
-        if ($this->routes->pathOf((int) $item['id'], $lang) === null) {
+        $path = $this->routes->pathOf((int) $item['id'], $lang);
+        if ($path === null) {
             throw new OperationError('route_missing', "Item {$item['item_key']} has no path in {$lang}: set one with route.set");
         }
         $published = $this->publication->publish($site, (int) $item['id'], $lang, $version, $actor->label());
         $published['pages_removed'] = $this->cache->invalidate(['item:' . $item['id'], 'kind:' . $site->id . ':' . $item['kind']]);
+        $this->notify($site, [$path]);
         $origin = (string) $this->db->value('SELECT origin FROM item_version WHERE id = ?', [$version]);
         if ($origin === 'source') {
             $published['translations_queued'] = $this->queueTranslations($site, $item, $lang, $version);
         }
         return $published;
+    }
+
+    /** Search engines of IndexNow are told of changed addresses by a job; it sends nothing from an experimental installation. */
+    private function notify(Site $site, array $paths): void
+    {
+        if (!$this->experimental && $site->indexable && $paths) {
+            $this->queue->push('indexnow', ['site' => $site->key, 'paths' => array_values($paths)]);
+        }
+    }
+
+    /** A publication at a future time: a job publish runs it then (bin/ramonak jobs:run, every minute). */
+    private function schedule(Site $site, Actor $actor, array $input): array
+    {
+        $item = $this->content->item($site, (string) self::need($input, 'item'));
+        $lang = (string) self::need($input, 'lang');
+        $at = is_numeric($input['at'] ?? null) ? (int) $input['at'] : (int) strtotime((string) self::need($input, 'at'));
+        if ($at <= 0 || $at < $this->db->now() + 30) {
+            throw new OperationError('at_invalid', 'at is a time at least a minute ahead: unix seconds or ISO 8601 with its offset, such as 2026-12-01T09:00:00+01:00');
+        }
+        $version = isset($input['version']) ? (int) $input['version'] : (int) ($this->content->latest((int) $item['id'], $lang)['id'] ?? 0);
+        if ($version === 0 || $this->content->version($version)['item_id'] != $item['id']) {
+            throw new OperationError('version_unknown', "Item {$item['item_key']} has no such version in {$lang}", 404);
+        }
+        if ($this->routes->pathOf((int) $item['id'], $lang) === null) {
+            throw new OperationError('route_missing', "Item {$item['item_key']} has no path in {$lang}: set one with route.set");
+        }
+        $job = $this->queue->push('publish', ['site' => $site->key, 'item' => $item['item_key'], 'lang' => $lang, 'version' => $version, 'by' => $actor->member,
+            'agent' => $actor->agent], $at - $this->db->now());
+        return ['scheduled' => $job, 'item' => $item['item_key'], 'lang' => $lang, 'version' => $version, 'at' => gmdate('c', $at)];
+    }
+
+    private function unschedule(Site $site, Actor $actor, array $input): array
+    {
+        $done = $this->db->exec("UPDATE job SET state = 'done', result = ? WHERE id = ? AND kind = 'publish' AND state = 'queued'",
+            ['cancelled by ' . $actor->label(), (int) self::need($input, 'job')]);
+        if ($done !== 1) {
+            throw new OperationError('schedule_unknown', 'No waiting scheduled publication with this job id', 404);
+        }
+        return ['cancelled' => (int) $input['job']];
     }
 
     /** @return list<string> */
@@ -249,6 +295,8 @@ final class Operations
         $item = $this->content->item($site, (string) self::need($input, 'item'));
         $done = $this->publication->unpublish((int) $item['id'], (string) self::need($input, 'lang'));
         $removed = $this->cache->invalidate(['item:' . $item['id'], 'kind:' . $site->id . ':' . $item['kind']]);
+        $path = $this->routes->pathOf((int) $item['id'], (string) $input['lang']);
+        $this->notify($site, $path === null ? [] : [$path]);
         return ['unpublished' => $done, 'pages_removed' => $removed];
     }
 
@@ -258,6 +306,8 @@ final class Operations
         $current = $this->publication->current((int) $item['id'], (string) self::need($input, 'lang'))
             ?? throw new OperationError('publication_unknown', 'Nothing is published to review', 404);
         $id = $this->publication->review((int) $current['publication_id'], (string) self::need($input, 'verdict'), (string) ($input['note'] ?? ''), $actor->label());
+        // a review can open a machine translation to search engines, or close it again: its pages are built anew
+        $this->cache->invalidate(['item:' . $item['id']]);
         return ['review' => $id, 'publication' => (int) $current['publication_id'], 'version' => (int) $current['version_id']];
     }
 
@@ -269,6 +319,7 @@ final class Operations
         if ($result['moved_from'] !== null) {
             $this->cache->purgePath($site->primaryDomain(), $result['moved_from']);
         }
+        $this->notify($site, array_values(array_filter([$result['path'], $result['moved_from']])));
         return $result;
     }
 

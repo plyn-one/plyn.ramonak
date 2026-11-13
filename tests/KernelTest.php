@@ -150,6 +150,20 @@ final class KernelTest extends TestCase
         $en = $this->get('/en/services/asylum');
         $this->assertSame(200, $en->status);
         $this->assertStringContainsString('[en] Убежище', $en->body);
+        $this->assertStringContainsString('<meta name="robots" content="noindex, nofollow">', $en->body, 'a machine translation is closed until reviewed');
+        $this->assertStringNotContainsString('hreflang', $en->body);
+        $this->assertStringNotContainsString('/en/services/asylum', $this->get('/sitemap.xml')->body);
+        // two distinct reviewers open it (machine_reviews: 2); one is not enough
+        foreach (['be', 'en'] as $lang) {
+            $this->op('review.add', ['item' => 'asylum', 'lang' => $lang, 'verdict' => 'ok_for_now'], new Actor('m-3', 'supracoŭnik', 'reviewer-a'));
+        }
+        $this->assertStringContainsString('noindex', $this->get('/en/services/asylum')->body);
+        foreach (['be', 'en'] as $lang) {
+            $this->op('review.add', ['item' => 'asylum', 'lang' => $lang, 'verdict' => 'ok_for_now'], new Actor('m-3', 'supracoŭnik', 'reviewer-b'));
+        }
+        $en = $this->get('/en/services/asylum');
+        $this->assertStringNotContainsString('noindex', $en->body);
+        $this->assertStringContainsString('/en/services/asylum', $this->get('/sitemap.xml')->body);
         $this->assertStringContainsString('hreflang="be" href="https://example.test/be/services/asylum"', $en->body);
         $this->assertStringContainsString('hreflang="x-default" href="https://example.test/services/asylum"', $en->body);
         // an edited English text replaces the machine one and is not overwritten by the next source version
@@ -199,6 +213,58 @@ final class KernelTest extends TestCase
         $this->op('redirect.import', ['redirects' => [['path' => '/services/asylum', 'target' => '/ru/services/asylum']]]);
         $old = $get('/services/asylum');
         $this->assertSame([301, 'https://prefixed.test/ru/services/asylum'], [$old->status, $old->headers['Location']]);
+    }
+
+    public function testAReviewThatFindsWorkClosesTheTranslationAgain(): void
+    {
+        $this->page('asylum', 'page', '/services/asylum', ['title' => 'Убежище']);
+        $this->k->queue->run($this->k->jobHandlers());
+        foreach (['a', 'b'] as $r) {
+            $this->op('review.add', ['item' => 'asylum', 'lang' => 'en', 'verdict' => 'ok_for_now'], new Actor('m-3', 'supracoŭnik', $r));
+        }
+        $this->assertStringNotContainsString('noindex', $this->get('/en/services/asylum')->body);
+        $this->op('review.add', ['item' => 'asylum', 'lang' => 'en', 'verdict' => 'needs_work', 'note' => 'term'], new Actor('m-3', 'supracoŭnik', 'c'));
+        $this->assertStringContainsString('noindex', $this->get('/en/services/asylum')->body);
+    }
+
+    public function testScheduledPublicationAndTheDateOfAnArticle(): void
+    {
+        $this->op('content.create', ['item' => 'n1', 'kind' => 'news', 'lang' => 'ru', 'path' => '/news/old-case']);
+        $this->op('content.save', ['item' => 'n1', 'lang' => 'ru', 'fields' => ['title' => 'Дело', 'date' => '2019-03-04', 'author' => 'Анна']]);
+        try {
+            $this->op('publication.publish', ['item' => 'n1', 'lang' => 'ru', 'at' => time() - 10]);
+            $this->fail('a past time is refused');
+        } catch (OperationError $e) {
+            $this->assertSame('at_invalid', $e->error);
+        }
+        $s = $this->op('publication.publish', ['item' => 'n1', 'lang' => 'ru', 'at' => gmdate('c', time() + 3600)]);
+        $this->assertSame(404, $this->get('/news/old-case')->status, 'not public before its time');
+        $this->k->queue->run($this->k->jobHandlers());
+        $this->assertSame(404, $this->get('/news/old-case')->status);
+        $this->k->db->exec('UPDATE job SET run_after = ? WHERE id = ?', [time() - 1, $s['scheduled']]);
+        $this->k->queue->run($this->k->jobHandlers());
+        $page = $this->get('/news/old-case');
+        $this->assertSame(200, $page->status);
+        $ld = json_decode(preg_replace('#^.*<script type="application/ld\+json">(.*?)</script>.*$#s', '$1', $page->body), true);
+        $article = $ld['@graph'][0];
+        $this->assertSame(['NewsArticle', '2019-03-04', 'Анна', 'LegalService'], [$article['@type'], $article['datePublished'], $article['author']['name'], $article['publisher']['@type']],
+            'the date of the article is its own field; the record of when it was published stays true');
+        $this->assertStringStartsWith(gmdate('Y-m-d'), $article['dateModified']);
+        $s2 = $this->op('publication.schedule', ['item' => 'n1', 'lang' => 'ru', 'at' => time() + 600]);
+        $this->assertSame($s2['scheduled'], $this->op('publication.unschedule', ['job' => $s2['scheduled']])['cancelled']);
+    }
+
+    public function testOneSchemeOneCaseAndIndexNow(): void
+    {
+        $this->page('asylum', 'page', '/services/asylum', ['title' => 'Убежище']);
+        $http = $this->k->handle(new Request('GET', 'example.test', '/services/asylum', '', [], '', false));
+        $this->assertSame([301, 'https://example.test/services/asylum'], [$http->status, $http->headers['Location']]);
+        $caps = $this->get('/Services/Asylum');
+        $this->assertSame([301, 'https://example.test/services/asylum'], [$caps->status, $caps->headers['Location']]);
+        $sent = [];
+        $this->k->indexNow = function (array $job) use (&$sent): string { $sent[] = $job['paths']; return 'sent'; };
+        $this->k->queue->run($this->k->jobHandlers());
+        $this->assertContains(['/services/asylum'], $sent, 'a publication tells IndexNow');
     }
 
     public function testExperimentalInstallationIsClosedToIndexing(): void

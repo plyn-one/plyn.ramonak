@@ -141,10 +141,21 @@ example site, 0.38 ms at the median against 1.27 ms rendered by PHP. Each built 
 builds them again. A release starts with an empty cache. The same measurement on the hosting (A-Rozum/rudy, October 2026)
 gave 0.49 ms for a file and 4 to 5 ms for a page rendered from the database, which is why built pages come first.
 
+Structured data (JSON-LD): the organization of the site (site.json `schema.organization`, such as LegalService) on its
+home pages, and the type a kind declares (`schema`: Article, NewsArticle, BlogPosting) with headline, author, dates and
+publisher. The date of an article is its own field `date`, the date of the event or of the original publication, so a text
+added now about a past event carries its true date; the record of when it was published stays as it happened, and
+dateModified and the sitemap's lastmod follow it. A publication can be scheduled (`publication.publish` with `at`, or
+`publication.schedule`): the job publish runs it within a minute of its time. Every publication, move and removal tells
+the engines of IndexNow (Bing, Yandex and others) of its addresses; the site serves its key at `/<key>.txt`. One scheme
+(https) and one case (lower) answer every address; the others are 301s.
+
 ## 8. Translation
 
 When a source version is published, a `translation` job is queued for each language of the site with machine translation
-on, unless that language has an edited version that follows a newer source. The job asks the model route of the frame's
+on, unless that language has an edited version that follows a newer source. A machine version is public to visitors at once but closed to search engines (noindex, out of hreflang and the
+sitemap) until as many distinct reviewers as the site asks (`machine_reviews`, 1 by default; 0 opens it at once) have
+reviewed it as `ok_for_now` and none as `needs_work`. The job asks the model route of the frame's
 Klučnik (its limit and accounting apply), writes a `machine` version and publishes it. The site's glossary of terms comes
 from its configuration; for Legal Status, from `Legal-Status-UAB/translation`.
 

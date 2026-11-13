@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Ramonak\Render;
 
+use Ramonak\Content\Indexing;
 use Ramonak\Db;
 use Ramonak\Site;
 
@@ -18,6 +19,8 @@ final class Sitemap
             $rows = $this->db->all('SELECT r.item_id, r.lang, r.path, p.published_at FROM route r
                 JOIN publication p ON p.item_id = r.item_id AND p.lang = r.lang AND p.current = 1
                 WHERE r.site_id = ? AND r.status = 200 ORDER BY r.path', [$site->id]);
+            $indexing = new Indexing($this->db);
+            $rows = array_values(array_filter($rows, fn ($r) => $indexing->open($site, (int) $r['item_id'], (string) $r['lang'])));
             $byItem = [];
             foreach ($rows as $r) {
                 $byItem[$r['item_id']][] = $r;

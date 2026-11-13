@@ -9,6 +9,7 @@ use Ramonak\Content\Publication;
 use Ramonak\Content\Routes;
 use Ramonak\Http\Request;
 use Ramonak\Http\Response;
+use Ramonak\Jobs\IndexNow;
 use Ramonak\Jobs\MessagesTranslator;
 use Ramonak\Jobs\Queue;
 use Ramonak\Jobs\Translate;
@@ -34,6 +35,8 @@ final class Kernel
     public readonly Operations $operations;
     private ?Renderer $renderer = null;
     private ?Translator $translator;
+    /** @var (callable(array):string)|null a stand-in for the IndexNow job, for tests */
+    public $indexNow = null;
 
     public function __construct(public readonly Config $config, ?Translator $translator = null)
     {
@@ -65,7 +68,16 @@ final class Kernel
     /** @return array<string,callable(array):string> */
     public function jobHandlers(): array
     {
-        return ['translate' => new Translate($this->db, $this->sites, $this->content, $this->publication, $this->routes, $this->cache, $this->translator)];
+        return [
+            'translate' => new Translate($this->db, $this->sites, $this->content, $this->publication, $this->routes, $this->cache, $this->translator),
+            'publish' => function (array $job): string {
+                $site = $this->sites->byKey((string) $job['site']) ?? throw new \RuntimeException('no site ' . $job['site']);
+                $done = $this->operations->run($site, new Operation\Actor((string) $job['by'], 'davierany', isset($job['agent']) ? (string) $job['agent'] . '/scheduled' : 'scheduled'),
+                    'publication.publish', ['item' => $job['item'], 'lang' => $job['lang'], 'version' => $job['version']]);
+                return 'published as publication ' . $done['publication'];
+            },
+            'indexnow' => $this->indexNow ?? new IndexNow($this->sites, (array) $this->config->get('indexnow', []), $this->config->experimental()),
+        ];
     }
 
     private function renderer(): Renderer
@@ -90,6 +102,9 @@ final class Kernel
         if ($site === null) {
             return Response::text('No site at this address', 404);
         }
+        if (!$request->https && $this->config->get('force_https', true)) {
+            return Response::redirect('https://' . $request->host . $request->path . ($request->query !== '' ? '?' . $request->query : ''));
+        }
         if (($site->domains[$request->host] ?? '') === 'alias') {
             return Response::redirect($site->url($request->path) . ($request->query !== '' ? '?' . $request->query : ''));
         }
@@ -102,6 +117,10 @@ final class Kernel
         if ($request->path === '/robots.txt') {
             return Response::text((new Sitemap($this->db, $this->config->experimental()))->robots($site));
         }
+        $indexNowKey = ((array) $this->config->get('indexnow', []))[$site->key] ?? null;
+        if (is_string($indexNowKey) && $request->path === '/' . $indexNowKey . '.txt') {
+            return Response::text($indexNowKey);
+        }
         if ($request->path === '/sitemap.xml') {
             return Response::text((new Sitemap($this->db, $this->config->experimental()))->xml($site), 200, 'application/xml');
         }
@@ -111,6 +130,10 @@ final class Kernel
             return $this->notFound($site, $site->defaultLanguage);
         }
         $route = $this->routes->resolve($site, $path);
+        if ($route === null && $path !== mb_strtolower($path) && $this->routes->resolve($site, mb_strtolower($path)) !== null) {
+            // an address typed or linked in capitals leads to its one form
+            return Response::redirect($site->url(mb_strtolower($path)) . ($request->query !== '' ? '?' . $request->query : ''));
+        }
         if ($route === null && $path === '/' && $site->prefixedOnly()) {
             // the root of a site whose languages all have prefixes chooses one for the visitor: their browser's, else the
             // default (x-default); never built as a file, as it differs by visitor

@@ -1,18 +1,105 @@
 {
   "key": "example",
-  "name": {"ru": "Пример", "be": "Прыклад", "en": "Example"},
+  "name": {
+    "ru": "Пример",
+    "be": "Прыклад",
+    "en": "Example"
+  },
   "default_language": "ru",
   "indexable": true,
-  "domains": {"example.test": "primary", "www.example.test": "alias"},
+  "domains": {
+    "example.test": "primary",
+    "www.example.test": "alias"
+  },
   "languages": [
-    {"lang": "ru", "prefix": ""},
-    {"lang": "be", "prefix": "be"},
-    {"lang": "en", "prefix": "en"}
+    {
+      "lang": "ru",
+      "prefix": ""
+    },
+    {
+      "lang": "be",
+      "prefix": "be"
+    },
+    {
+      "lang": "en",
+      "prefix": "en"
+    }
   ],
   "kinds": {
-    "home": {"template": "home.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "body": {"type": "html"}}},
-    "page": {"template": "page.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "body": {"type": "html"}}},
-    "news": {"template": "page.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "date": {"type": "date", "translate": false}, "body": {"type": "html"}}}
+    "home": {
+      "template": "home.twig",
+      "fields": {
+        "title": {
+          "type": "text",
+          "required": true
+        },
+        "description": {
+          "type": "text"
+        },
+        "body": {
+          "type": "html"
+        }
+      }
+    },
+    "page": {
+      "template": "page.twig",
+      "fields": {
+        "title": {
+          "type": "text",
+          "required": true
+        },
+        "description": {
+          "type": "text"
+        },
+        "body": {
+          "type": "html"
+        }
+      }
+    },
+    "news": {
+      "template": "page.twig",
+      "fields": {
+        "title": {
+          "type": "text",
+          "required": true
+        },
+        "description": {
+          "type": "text"
+        },
+        "date": {
+          "type": "date",
+          "translate": false
+        },
+        "body": {
+          "type": "html"
+        },
+        "author": {
+          "type": "text",
+          "translate": false
+        }
+      },
+      "schema": "NewsArticle"
+    }
   },
-  "glossary": {"en": [{"source": "экстрадиция", "target": "extradition"}]}
+  "glossary": {
+    "en": [
+      {
+        "source": "экстрадиция",
+        "target": "extradition"
+      }
+    ]
+  },
+  "machine_reviews": 2,
+  "schema": {
+    "organization": {
+      "@type": "LegalService",
+      "name": "Пример",
+      "telephone": "+370 600 00000",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Vilnius",
+        "addressCountry": "LT"
+      }
+    }
+  }
 }

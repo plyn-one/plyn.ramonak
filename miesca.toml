@@ -64,3 +64,5 @@ kola = "usie"
 "file:tests/KernelTest.php" = { faza = "ściah", rola = "prajava" }
 "dir:examples/sites/prefixed" = { faza = "ściah", rola = "prajava" }
 "file:examples/sites/prefixed/site.json" = { faza = "ściah", rola = "prajava" }
+"file:src/Content/Indexing.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Jobs/IndexNow.php" = { faza = "ściah", rola = "prajava" }

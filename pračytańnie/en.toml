@@ -66,3 +66,5 @@
 "file:tests/KernelTest.php" = "the first slice end to end on SQLite: publication and rollback, addresses, lists and built pages, machine translation, indexing, levels, the bridge, migrations"
 "dir:examples/sites/prefixed" = "an example site whose languages all have prefixes, its default English; it uses the templates of the example site"
 "file:examples/sites/prefixed/site.json" = "the declaration of the prefixed example site"
+"file:src/Content/Indexing.php" = "whether a published version is open to search engines: a machine translation once enough distinct reviewers found it fit (site.json machine_reviews)"
+"file:src/Jobs/IndexNow.php" = "the job indexnow: tells Bing, Yandex and the other engines of IndexNow of changed addresses; never from an experimental installation"

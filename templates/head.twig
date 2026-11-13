@@ -12,4 +12,5 @@
 <meta property="og:url" content="{{ seo.canonical }}">
 <meta property="og:locale" content="{{ seo.locale }}">
 {% if seo.description %}<meta property="og:description" content="{{ seo.description }}">
+{% endif %}{% if seo.jsonld %}<script type="application/ld+json">{{ seo.jsonld|raw }}</script>
 {% endif %}

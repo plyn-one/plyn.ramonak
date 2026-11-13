@@ -21,6 +21,11 @@ AddDefaultCharset utf-8
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # one scheme: https
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
   # the built pages are reached only through their addresses
   RewriteCond %{THE_REQUEST} \\s/{$cacheDir}/ [NC]
   RewriteRule ^ - [R=404,L]

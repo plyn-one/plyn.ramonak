@@ -52,3 +52,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "The owner decided for michalevic.org: every language with its prefix, Russian too (/ru/…), the old unprefixed addresses kept as 301s to the Russian pages, and English for a visitor whose language the site does not have. A site whose languages all have prefixes now answers its root with a 302 by Accept-Language and its q-values, else its default language, with Vary: Accept-Language and never as a built file; the home pages name the root as x-default, other pages their version in the default language. Tested on the example site prefixed: 11 tests, 75 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "A review of SEO with the owner, from Google's and Yandex's documentation, the changes of 2025-2026 (FAQ rich results ended on 7 May 2026; no special markup or llms.txt for AI features) and what practitioners and the 2024 leak add (click satisfaction, a site-level quality, Yandex's behavioural and commercial factors). The owner decided: machine translations are indexed only after review by an agent or several. Added: a machine version is closed to search engines until site.json machine_reviews distinct reviewers found it ok_for_now and none needs_work; JSON-LD of the organization and of a kind's schema type with the article's own date and the true dates of publication; scheduled publication and its cancellation; IndexNow on every publication, move and removal, never from an experimental installation; https and lower case as the one form of an address. 14 tests, 93 assertions."

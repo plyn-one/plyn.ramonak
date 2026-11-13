@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Ramonak\Render;
 
+use Ramonak\Content\Indexing;
 use Ramonak\Content\Publication;
 use Ramonak\Content\Routes;
 use Ramonak\Db;
@@ -29,7 +30,10 @@ final class Renderer
         private string $varDir,
         private bool $experimental,
         private bool $autoReload = false,
-    ) {}
+        private ?Indexing $indexing = null,
+    ) {
+        $this->indexing ??= new Indexing($db);
+    }
 
     /** @return array{html:string, deps:list<string>} */
     public function page(Site $site, array $route): array
@@ -47,7 +51,7 @@ final class Renderer
             'site' => ['key' => $site->key, 'name' => $site->name($lang), 'lang' => $lang, 'settings' => $site->declaration['settings'] ?? []],
             'page' => ['key' => $route['item_key'], 'kind' => $route['kind'], 'fields' => $fields, 'path' => $path, 'url' => $site->url($path),
                 'published_at' => (int) $current['published_at'], 'origin' => $current['origin']],
-            'seo' => $this->seo($site, (int) $route['item_id'], $lang, $path, $fields),
+            'seo' => $this->seo($site, (int) $route['item_id'], (string) $route['kind'], $lang, $path, $fields, (int) $current['published_at']),
             'languages' => $this->languageLinks($site, (int) $route['item_id'], $lang),
         ];
         $html = $this->env($site)->render((string) ($kind['template'] ?? $route['kind'] . '.twig'), $context);
@@ -67,11 +71,13 @@ final class Renderer
     }
 
     /** @return array<string,mixed> */
-    private function seo(Site $site, int $itemId, string $lang, string $path, array $fields): array
+    private function seo(Site $site, int $itemId, string $kind, string $lang, string $path, array $fields, int $publishedAt): array
     {
         $alternates = [];
         $default = null;
-        foreach ($this->published($itemId) as $row) {
+        $open = $this->indexing->open($site, $itemId, $lang);
+        // hreflang names only the versions open to search engines, and only from a page that is open itself
+        foreach ($open ? $this->indexing->openVersions($site, $itemId) : [] as $row) {
             $url = $site->url((string) $row['path']);
             $alternates[] = ['lang' => $row['lang'], 'url' => $url];
             if ($row['lang'] === $site->defaultLanguage) {
@@ -86,7 +92,47 @@ final class Renderer
             'alternates' => count($alternates) > 1 ? $alternates : [],
             // x-default: the root that chooses a language, where every language has its prefix; otherwise the default language
             'x_default' => count($alternates) > 1 ? ($site->prefixedOnly() && $path === $this->routes->homePath($site, $lang) ? $site->url('/') : ($default ?? $alternates[0]['url'])) : null,
-            'indexable' => $site->indexable && !$this->experimental, 'locale' => $lang];
+            'indexable' => $site->indexable && !$this->experimental && $open, 'locale' => $lang,
+            'jsonld' => $this->jsonLd($site, $itemId, $kind, $lang, $path, $fields, $publishedAt, $title)];
+    }
+
+    /**
+     * Structured data as schema.org JSON-LD: the organization of the site (site.json schema.organization) on its home pages,
+     * and the kind's own type (kinds.<kind>.schema: Article, NewsArticle, BlogPosting, WebPage) with its dates: datePublished
+     * is the field date when the kind has it (the date of the event or of the original publication), else the first
+     * publication in this language; dateModified is the current publication.
+     */
+    private function jsonLd(Site $site, int $itemId, string $kind, string $lang, string $path, array $fields, int $publishedAt, string $title): ?string
+    {
+        $graph = [];
+        $organization = $site->declaration['schema']['organization'] ?? null;
+        if (is_array($organization) && $path === $site->home($lang)) {
+            $graph[] = ['@type' => $organization['@type'] ?? 'Organization', 'url' => $site->url($site->home($lang))] + $organization;
+        }
+        $type = $site->declaration['kinds'][$kind]['schema'] ?? null;
+        if (is_string($type)) {
+            $first = (int) ($this->db->value('SELECT MIN(published_at) FROM publication WHERE item_id = ? AND lang = ?', [$itemId, $lang]) ?? $publishedAt);
+            $node = ['@type' => $type, 'headline' => (string) ($fields['title'] ?? $title), 'inLanguage' => $lang, 'mainEntityOfPage' => $site->url($path),
+                'datePublished' => isset($fields['date']) && is_string($fields['date']) ? $fields['date'] : gmdate('c', $first),
+                'dateModified' => gmdate('c', $publishedAt)];
+            if (!empty($fields['description'])) {
+                $node['description'] = (string) $fields['description'];
+            }
+            if (!empty($fields['author'])) {
+                $node['author'] = ['@type' => 'Person', 'name' => (string) $fields['author']];
+            }
+            if (!empty($fields['image'])) {
+                $node['image'] = $site->url('/' . ltrim((string) $fields['image'], '/'));
+            }
+            if (is_array($organization)) {
+                $node['publisher'] = ['@type' => $organization['@type'] ?? 'Organization', 'name' => $organization['name'] ?? $site->name($lang)];
+            }
+            $graph[] = $node;
+        }
+        if (!$graph) {
+            return null;
+        }
+        return json_encode(['@context' => 'https://schema.org', '@graph' => $graph], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
     }
 
     /** @return list<array{lang:string, path:string}> the languages an item is published in, with their paths */
