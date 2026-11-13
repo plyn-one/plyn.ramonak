@@ -83,6 +83,32 @@
         }
       },
       "schema": "NewsArticle"
+    },
+    "person": {
+      "template": "page.twig",
+      "schema": "Person",
+      "fields": {
+        "title": {
+          "type": "text",
+          "required": true
+        },
+        "alternate_name": {
+          "type": "text"
+        },
+        "job_title": {
+          "type": "text"
+        },
+        "description": {
+          "type": "text"
+        },
+        "same_as": {
+          "type": "list",
+          "translate": false
+        },
+        "body": {
+          "type": "html"
+        }
+      }
     }
   },
   "glossary": {
@@ -96,13 +122,19 @@
   "machine_reviews": 2,
   "schema": {
     "organization": {
-      "@type": "LegalService",
-      "name": "Пример",
-      "telephone": "+370 600 00000",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Vilnius",
-        "addressCountry": "LT"
+      "@type": "Organization",
+      "name": {
+        "ru": "Пример",
+        "en": "Example"
+      },
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "Legal Status",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Vilnius",
+          "addressCountry": "LT"
+        }
       }
     }
   }

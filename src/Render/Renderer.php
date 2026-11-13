@@ -108,12 +108,31 @@ final class Renderer
     private function jsonLd(Site $site, int $itemId, string $kind, string $lang, string $path, array $fields, int $publishedAt, string $title): ?string
     {
         $graph = [];
-        $organization = $site->declaration['schema']['organization'] ?? null;
+        $organization = self::localize($site->declaration['schema']['organization'] ?? null, $lang, $site->defaultLanguage);
         if (is_array($organization) && $path === $site->home($lang)) {
             $graph[] = ['@type' => $organization['@type'] ?? 'Organization', 'url' => $site->url($site->home($lang))] + $organization;
         }
         $type = $site->declaration['kinds'][$kind]['schema'] ?? null;
-        if (is_string($type)) {
+        if ($type === 'Person') {
+            // a page about a person: ProfilePage with the person as its main entity; same_as names the same person elsewhere
+            // (Wikipedia, profiles), which is how a search engine joins them into one
+            $person = ['@type' => 'Person', 'name' => (string) ($fields['title'] ?? $title), 'url' => $site->url($path)];
+            foreach (['alternate_name' => 'alternateName', 'job_title' => 'jobTitle', 'description' => 'description'] as $field => $property) {
+                if (!empty($fields[$field])) {
+                    $person[$property] = (string) $fields[$field];
+                }
+            }
+            if (!empty($fields['image'])) {
+                $person['image'] = $site->url('/' . ltrim((string) $fields['image'], '/'));
+            }
+            if (!empty($fields['same_as']) && is_array($fields['same_as'])) {
+                $person['sameAs'] = array_values(array_filter($fields['same_as'], 'is_string'));
+            }
+            if (is_array($organization)) {
+                $person['worksFor'] = ['@type' => $organization['@type'] ?? 'Organization', 'name' => $organization['name'] ?? $site->name($lang)];
+            }
+            $graph[] = ['@type' => 'ProfilePage', 'inLanguage' => $lang, 'url' => $site->url($path), 'dateModified' => gmdate('c', $publishedAt), 'mainEntity' => $person];
+        } elseif (is_string($type)) {
             $first = (int) ($this->db->value('SELECT MIN(published_at) FROM publication WHERE item_id = ? AND lang = ?', [$itemId, $lang]) ?? $publishedAt);
             $published = isset($fields['date']) && is_string($fields['date']) ? $fields['date'] : gmdate('c', $first);
             $node = ['@type' => $type, 'headline' => (string) ($fields['title'] ?? $title), 'inLanguage' => $lang, 'mainEntityOfPage' => $site->url($path),
@@ -137,6 +156,21 @@ final class Renderer
             return null;
         }
         return json_encode(['@context' => 'https://schema.org', '@graph' => $graph], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
+    }
+
+    /**
+     * A value of the site's declaration in one language: an object whose keys are all language tags of the site gives the
+     * one of this language (else of the default); everything else is kept, its parts read the same way.
+     */
+    public static function localize(mixed $value, string $lang, string $default): mixed
+    {
+        if (!is_array($value)) {
+            return $value;
+        }
+        if ($value !== [] && !array_is_list($value) && count(array_filter(array_keys($value), fn ($k) => !preg_match('/^[a-z]{2,3}(-[A-Za-z0-9]+)?$/', (string) $k))) === 0) {
+            return $value[$lang] ?? $value[$default] ?? reset($value);
+        }
+        return array_map(fn ($v) => self::localize($v, $lang, $default), $value);
     }
 
     /** @return list<array{lang:string, path:string}> the languages an item is published in, with their paths */

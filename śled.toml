@@ -70,3 +70,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "Read with the owner: five Russian guides at the top of search for technical SEO (sostav.ru twice, kokoc, habr, ingate) and the features of Yoast SEO Premium. New for the engine and added: Yandex Clean-param for campaign parameters, security headers (HSTS outside an experimental installation, nosniff, SAMEORIGIN, referrer policy), compression and a year of cache for versioned assets, Open Graph type, site name and image with a Twitter card, and the operation seo.audit (orphans, broken links and links through redirects, missing, duplicate and long titles and descriptions, missing dates, translations waiting for review), the counterpart of what Yoast sells. Outdated in those guides and left out: Host and Crawl-delay, Original texts of Yandex, FID, keyword density and LSI, TIC, a canonical of later list pages to the first, frames and Flash. 15 tests, 102 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "For michalevic.org the owner set who is who: the site is first of all Ales (Alaksiej) Michalevic, the office has no address of its own, its parent is Legal Status in Vilnius, the client manager's phone and messengers serve both. Added: a kind with schema Person gives a ProfilePage whose main entity is the person, with alternate name, job title, image and sameAs (Wikipedia, profiles) and the organization they work for; values of the site's declaration given per language (an object keyed by language tags) are read in the language of the page, so the organization and its parent speak it. 16 tests, 103 assertions."

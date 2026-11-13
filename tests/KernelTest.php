@@ -247,7 +247,7 @@ final class KernelTest extends TestCase
         $this->assertSame(200, $page->status);
         $ld = json_decode(preg_replace('#^.*<script type="application/ld\+json">(.*?)</script>.*$#s', '$1', $page->body), true);
         $article = $ld['@graph'][0];
-        $this->assertSame(['NewsArticle', '2019-03-04', 'Анна', 'LegalService'], [$article['@type'], $article['datePublished'], $article['author']['name'], $article['publisher']['@type']],
+        $this->assertSame(['NewsArticle', '2019-03-04', 'Анна', 'Organization', 'Пример'], [$article['@type'], $article['datePublished'], $article['author']['name'], $article['publisher']['@type'], $article['publisher']['name']],
             'the date of the article is its own field; the record of when it was published stays true');
         $this->assertSame('2019-03-04', $article['dateModified'], 'moved or republished, a material keeps its own date');
         $this->op('content.save', ['item' => 'n1', 'lang' => 'ru', 'fields' => ['title' => 'Дело', 'date' => '2019-03-04', 'updated' => '2026-11-14', 'author' => 'Анна'], 'publish' => true]);
@@ -268,6 +268,19 @@ final class KernelTest extends TestCase
         $this->k->indexNow = function (array $job) use (&$sent): string { $sent[] = $job['paths']; return 'sent'; };
         $this->k->queue->run($this->k->jobHandlers());
         $this->assertContains(['/services/asylum'], $sent, 'a publication tells IndexNow');
+    }
+
+    public function testAPersonPageNamesThePersonForSearchEngines(): void
+    {
+        $this->op('content.create', ['item' => 'michalevic', 'kind' => 'person', 'lang' => 'en', 'path' => '/en/ales-michalevic']);
+        $this->op('content.save', ['item' => 'michalevic', 'lang' => 'en', 'publish' => true, 'fields' => ['title' => 'Ales (Alaksiej) Michalevic',
+            'job_title' => 'Lawyer', 'same_as' => ['https://en.wikipedia.org/wiki/Ales_Michalevic']]]);
+        $body = $this->get('/en/ales-michalevic')->body;
+        $ld = json_decode(preg_replace('#^.*<script type="application/ld\+json">(.*?)</script>.*$#s', '$1', $body), true);
+        $page = $ld['@graph'][0];
+        $this->assertSame(['ProfilePage', 'Person', 'Ales (Alaksiej) Michalevic', ['https://en.wikipedia.org/wiki/Ales_Michalevic'], 'Example'],
+            [$page['@type'], $page['mainEntity']['@type'], $page['mainEntity']['name'], $page['mainEntity']['sameAs'], $page['mainEntity']['worksFor']['name']],
+            'the organization speaks the language of the page');
     }
 
     public function testTheAuditFindsWhatASearchEngineWould(): void
