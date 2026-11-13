@@ -1,0 +1,18 @@
+{
+  "key": "example",
+  "name": {"ru": "Пример", "be": "Прыклад", "en": "Example"},
+  "default_language": "ru",
+  "indexable": true,
+  "domains": {"example.test": "primary", "www.example.test": "alias"},
+  "languages": [
+    {"lang": "ru", "prefix": "", "machine": false},
+    {"lang": "be", "prefix": "be"},
+    {"lang": "en", "prefix": "en"}
+  ],
+  "kinds": {
+    "home": {"template": "home.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "body": {"type": "html"}}},
+    "page": {"template": "page.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "body": {"type": "html"}}},
+    "news": {"template": "page.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "date": {"type": "date", "translate": false}, "body": {"type": "html"}}}
+  },
+  "glossary": {"en": [{"source": "экстрадиция", "target": "extradition"}]}
+}

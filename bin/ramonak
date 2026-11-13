@@ -1,0 +1,58 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+// The command line of an installation:
+//   migrate                       apply new migrations
+//   site:sync <site>              write a site's row, domains and languages from its site.json
+//   jobs:run [limit]              run due background jobs (cron, every minute)
+//   op <site> <operation> [json]  run one operation as the installation's administrator (actor cli)
+//   cache:purge <site>            remove a site's built pages
+//   htaccess                      write public/.htaccess from the configuration
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+use Ramonak\Config;
+use Ramonak\Htaccess;
+use Ramonak\Kernel;
+use Ramonak\Operation\Actor;
+
+$config = Config::load(getenv('RAMONAK_CONFIG') ?: dirname(__DIR__, 2) . '/shared/config.php');
+$kernel = new Kernel($config);
+$args = array_slice($argv, 1);
+$out = fn ($v) => fwrite(STDOUT, json_encode($v, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
+
+try {
+    switch ($args[0] ?? '') {
+        case 'migrate':
+            $out(['applied' => $kernel->migrate()]);
+            break;
+        case 'site:sync':
+            $site = $kernel->sites->sync($args[1] ?? throw new InvalidArgumentException('site:sync <site>'));
+            $kernel->cache->purgeSite($site->id);
+            $out(['site' => $site->key, 'domains' => $site->domains, 'languages' => array_keys($site->languages)]);
+            break;
+        case 'jobs:run':
+            $out($kernel->queue->run($kernel->jobHandlers(), (int) ($args[1] ?? 20)));
+            break;
+        case 'op':
+            $site = $kernel->sites->byKey($args[1] ?? '') ?? throw new InvalidArgumentException('op <site> <operation> [json]: no such site');
+            $input = json_decode($args[3] ?? '{}', true, 512, JSON_THROW_ON_ERROR);
+            $out($kernel->operations->run($site, new Actor('cli', 'administratar'), $args[2] ?? '', $input));
+            break;
+        case 'cache:purge':
+            $site = $kernel->sites->byKey($args[1] ?? '') ?? throw new InvalidArgumentException('cache:purge <site>');
+            $out(['pages_removed' => $kernel->cache->purgeSite($site->id)]);
+            break;
+        case 'htaccess':
+            $file = dirname(__DIR__) . '/public/.htaccess';
+            file_put_contents($file, Htaccess::render($config->experimental()));
+            $out(['written' => $file, 'experimental' => $config->experimental()]);
+            break;
+        default:
+            fwrite(STDERR, "ramonak: migrate | site:sync <site> | jobs:run [limit] | op <site> <operation> [json] | cache:purge <site> | htaccess\n");
+            exit(2);
+    }
+} catch (Ramonak\OperationError $e) {
+    $out(['error' => $e->error, 'message' => $e->getMessage()]);
+    exit(1);
+}

@@ -1,0 +1,237 @@
+<?php
+declare(strict_types=1);
+
+namespace Ramonak\Tests;
+
+use PHPUnit\Framework\TestCase;
+use Ramonak\Bridge\Bridge;
+use Ramonak\Config;
+use Ramonak\Http\Request;
+use Ramonak\Http\Response;
+use Ramonak\Jobs\Translator;
+use Ramonak\Kernel;
+use Ramonak\Operation\Actor;
+use Ramonak\OperationError;
+use Ramonak\Site;
+
+/** The first slice end to end on SQLite, with the example site of examples/sites/example. */
+final class KernelTest extends TestCase
+{
+    private string $dir;
+    private Kernel $k;
+    private Site $site;
+    private Actor $agent;
+    /** @var list<array{string,string}> */
+    private array $translated = [];
+
+    protected function setUp(): void
+    {
+        $this->dir = sys_get_temp_dir() . '/ramonak-test-' . bin2hex(random_bytes(4));
+        mkdir($this->dir . '/var', 0777, true);
+        $this->k = $this->kernel(experimental: false);
+        $this->k->migrate();
+        $this->site = $this->k->sites->sync('example');
+        $this->agent = new Actor('m-1', 'davierany', 'claude');
+    }
+
+    protected function tearDown(): void
+    {
+        exec('rm -rf ' . escapeshellarg($this->dir));
+    }
+
+    private function kernel(bool $experimental): Kernel
+    {
+        $test = $this;
+        $translator = new class($test) implements Translator {
+            public function __construct(private KernelTest $test) {}
+            public function translate(array $fields, array $types, string $from, string $to, array $glossary = []): array
+            {
+                $this->test->noteTranslation($from, $to);
+                return array_map(fn ($v) => "[{$to}] " . $v, $fields);
+            }
+        };
+        return new Kernel(new Config(['database' => ['dsn' => 'sqlite:' . $this->dir . '/db.sqlite'], 'var_dir' => $this->dir . '/var',
+            'sites_dir' => dirname(__DIR__) . '/examples/sites', 'cache_dir' => $this->dir . '/public/_cache', 'experimental' => $experimental,
+            'template_auto_reload' => true, 'bridge' => ['example' => str_repeat('k', 40)]]), $translator);
+    }
+
+    public function noteTranslation(string $from, string $to): void
+    {
+        $this->translated[] = [$from, $to];
+    }
+
+    private function op(string $name, array $input, ?Actor $actor = null): array
+    {
+        return $this->k->operations->run($this->site, $actor ?? $this->agent, $name, $input);
+    }
+
+    private function get(string $path, string $host = 'example.test', string $method = 'GET', string $query = ''): Response
+    {
+        return $this->k->handle(new Request($method, $host, $path, $query));
+    }
+
+    private function page(string $key, string $kind, string $path, array $fields, bool $publish = true): array
+    {
+        $this->op('content.create', ['item' => $key, 'kind' => $kind, 'lang' => 'ru', 'path' => $path]);
+        return $this->op('content.save', ['item' => $key, 'lang' => 'ru', 'fields' => $fields, 'publish' => $publish]);
+    }
+
+    public function testPublishedPageIsRenderedWithTheSeoContractAndBuilt(): void
+    {
+        $this->page('home', 'home', '/', ['title' => 'Бюро', 'description' => 'Адвокаты', 'body' => '<p>Текст</p>']);
+        $r = $this->get('/');
+        $this->assertSame(200, $r->status);
+        $this->assertStringContainsString('<title>Бюро</title>', $r->body);
+        $this->assertStringContainsString('<link rel="canonical" href="https://example.test/">', $r->body);
+        $this->assertStringContainsString('<meta name="description" content="Адвокаты">', $r->body);
+        $this->assertStringNotContainsString('noindex', $r->body);
+        $this->assertStringNotContainsString('hreflang', $r->body, 'one language published: no alternates');
+        $this->assertFileExists($this->dir . '/public/_cache/example.test/index.html');
+        $this->assertSame($r->body, file_get_contents($this->dir . '/public/_cache/example.test/index.html'));
+    }
+
+    public function testDraftsAreNotPublicAndRollbackRepublishesTheEarlierVersion(): void
+    {
+        $this->page('about', 'page', '/about-us', ['title' => 'О нас v1'], publish: false);
+        $this->assertSame(404, $this->get('/about-us')->status, 'a draft is not public');
+        $this->op('publication.publish', ['item' => 'about', 'lang' => 'ru']);
+        $this->assertStringContainsString('О нас v1', $this->get('/about-us')->body);
+        $this->op('content.save', ['item' => 'about', 'lang' => 'ru', 'fields' => ['title' => 'О нас v2'], 'publish' => true]);
+        $this->assertStringContainsString('О нас v2', $this->get('/about-us')->body);
+        $this->assertFileExists($this->dir . '/public/_cache/example.test/about-us/index.html');
+        $back = $this->op('publication.rollback', ['item' => 'about', 'lang' => 'ru']);
+        $this->assertSame(1, $back['pages_removed']);
+        $this->assertStringContainsString('О нас v1', $this->get('/about-us')->body);
+        $read = $this->op('content.read', ['item' => 'about']);
+        $this->assertSame(3, count($read['languages']['ru']['history']), 'every publication is kept');
+    }
+
+    public function testAddressesKeepAnswering(): void
+    {
+        $this->page('asylum', 'page', '/services/asylum', ['title' => 'Убежище']);
+        $this->assertSame(200, $this->get('/services/asylum')->status);
+        $slash = $this->get('/services/asylum/');
+        $this->assertSame([301, 'https://example.test/services/asylum'], [$slash->status, $slash->headers['Location']]);
+        $alias = $this->get('/services/asylum', 'www.example.test');
+        $this->assertSame([301, 'https://example.test/services/asylum'], [$alias->status, $alias->headers['Location']]);
+        $this->op('route.set', ['item' => 'asylum', 'lang' => 'ru', 'path' => '/uslugi/ubezhishhe']);
+        $this->op('route.set', ['item' => 'asylum', 'lang' => 'ru', 'path' => '/uslugi/asylum']);
+        foreach (['/services/asylum', '/uslugi/ubezhishhe'] as $old) {
+            $r = $this->get($old);
+            $this->assertSame([301, 'https://example.test/uslugi/asylum'], [$r->status, $r->headers['Location']], "{$old} leads straight to the newest path");
+        }
+        $import = $this->op('redirect.import', ['redirects' => [['path' => '/services/services/asylum', 'target' => '/uslugi/asylum'],
+            ['path' => '/old-page', 'status' => 410], ['path' => '/uslugi/asylum', 'target' => '/x']]]);
+        $this->assertSame(2, $import['imported']);
+        $this->assertSame('path_taken', $import['refused'][0]['error'], 'a redirect never hides a page');
+        $this->assertSame(410, $this->get('/old-page')->status);
+        $this->assertSame(404, $this->get('/nothing-here')->status);
+        $this->assertSame(405, $this->get('/uslugi/asylum', method: 'DELETE')->status);
+    }
+
+    public function testListsAreRebuiltWhenAnItemOfTheirKindIsPublished(): void
+    {
+        $this->page('home', 'home', '/', ['title' => 'Бюро']);
+        $this->page('n1', 'news', '/news/one', ['title' => 'Первая', 'date' => '2026-11-01']);
+        $this->assertStringContainsString('Первая', $this->get('/')->body);
+        $this->get('/news/one');
+        $this->assertFileExists($this->dir . '/public/_cache/example.test/index.html');
+        $this->page('n2', 'news', '/news/two', ['title' => 'Вторая', 'date' => '2026-11-02']);
+        $this->assertFileDoesNotExist($this->dir . '/public/_cache/example.test/index.html', 'the list page went with the new item of its kind');
+        $this->assertStringContainsString('Вторая', $this->get('/')->body);
+        $this->assertFileExists($this->dir . '/public/_cache/example.test/news/one/index.html', 'a page that lists nothing stays built');
+    }
+
+    public function testMachineTranslationIsPublishedUntilAnEditedVersionReplacesIt(): void
+    {
+        $published = $this->page('asylum', 'page', '/services/asylum', ['title' => 'Убежище', 'body' => '<p>Да</p>']);
+        $this->assertSame(['be', 'en'], $published['publication']['translations_queued']);
+        $this->k->queue->run($this->k->jobHandlers());
+        $en = $this->get('/en/services/asylum');
+        $this->assertSame(200, $en->status);
+        $this->assertStringContainsString('[en] Убежище', $en->body);
+        $this->assertStringContainsString('hreflang="be" href="https://example.test/be/services/asylum"', $en->body);
+        $this->assertStringContainsString('hreflang="x-default" href="https://example.test/services/asylum"', $en->body);
+        // an edited English text replaces the machine one and is not overwritten by the next source version
+        $this->op('content.save', ['item' => 'asylum', 'lang' => 'en', 'fields' => ['title' => 'Asylum'], 'publish' => true]);
+        $this->assertStringContainsString('Asylum', $this->get('/en/services/asylum')->body);
+        $again = $this->op('content.save', ['item' => 'asylum', 'lang' => 'ru', 'fields' => ['title' => 'Убежище 2'], 'publish' => true]);
+        $this->assertSame(['be'], $again['publication']['translations_queued']);
+        $this->k->queue->run($this->k->jobHandlers());
+        $this->assertStringContainsString('Asylum', $this->get('/en/services/asylum')->body);
+        $this->assertStringContainsString('[be] Убежище 2', $this->get('/be/services/asylum')->body);
+        $this->assertTrue($this->op('content.read', ['item' => 'asylum'])['languages']['en']['latest']['stale'], 'the edited translation is marked stale');
+    }
+
+    public function testExperimentalInstallationIsClosedToIndexing(): void
+    {
+        $this->page('home', 'home', '/', ['title' => 'Бюро']);
+        $this->assertStringContainsString('<loc>https://example.test/</loc>', $this->get('/sitemap.xml')->body);
+        $this->assertStringContainsString('Sitemap: https://example.test/sitemap.xml', $this->get('/robots.txt')->body);
+        $this->k = $this->kernel(experimental: true);
+        $r = $this->get('/');
+        $this->assertSame('noindex, nofollow', $r->headers['X-Robots-Tag']);
+        $this->assertStringContainsString('<meta name="robots" content="noindex, nofollow">', $r->body);
+        $this->assertStringNotContainsString('<loc>', $this->get('/sitemap.xml')->body);
+        $this->assertStringContainsString('Disallow: /', $this->get('/robots.txt')->body);
+    }
+
+    public function testLevelsAndFieldsAreChecked(): void
+    {
+        $staff = new Actor('m-2', 'supracoŭnik');
+        $this->page('about', 'page', '/about-us', ['title' => 'О нас'], publish: false);
+        $this->op('content.save', ['item' => 'about', 'lang' => 'ru', 'fields' => ['title' => 'Черновик']], $staff);
+        try {
+            $this->op('publication.publish', ['item' => 'about', 'lang' => 'ru'], $staff);
+            $this->fail('staff cannot publish');
+        } catch (OperationError $e) {
+            $this->assertSame('operation_forbidden', $e->error);
+        }
+        foreach ([[['title' => 'x', 'colour' => 'red'], 'field_unknown'], [['body' => 'x'], 'field_required']] as [$fields, $error]) {
+            try {
+                $this->op('content.save', ['item' => 'about', 'lang' => 'ru', 'fields' => $fields]);
+                $this->fail($error);
+            } catch (OperationError $e) {
+                $this->assertSame($error, $e->error);
+            }
+        }
+        try {
+            $this->op('content.save', ['item' => 'about', 'lang' => 'ru', 'fields' => ['title' => 'x'], 'origin' => 'machine']);
+            $this->fail('machine versions come from the job only');
+        } catch (OperationError $e) {
+            $this->assertSame('origin_invalid', $e->error);
+        }
+        $events = $this->op('event.list', []);
+        $this->assertGreaterThanOrEqual(3, count($events['events']));
+    }
+
+    public function testBridgeAcceptsOnlySignedFreshUnrepeatedRequests(): void
+    {
+        $key = str_repeat('k', 40);
+        $call = function (array $body, array $actor, ?string $signWith = null, ?int $time = null, ?string $nonce = null) use ($key): Response {
+            $json = json_encode($body);
+            $time ??= time();
+            $nonce ??= bin2hex(random_bytes(12));
+            $actorHeader = rtrim(strtr(base64_encode(json_encode($actor)), '+/', '-_'), '=');
+            $sig = Bridge::sign($signWith ?? $key, 'POST', 'example.test', '/_ramonak/api', $time, $nonce, $actorHeader, $json);
+            return $this->k->handle(new Request('POST', 'example.test', '/_ramonak/api', '', ['x-ramonak-time' => (string) $time,
+                'x-ramonak-nonce' => $nonce, 'x-ramonak-actor' => $actorHeader, 'x-ramonak-signature' => $sig], $json));
+        };
+        $admin = ['member' => 'm-1', 'level' => 'administratar', 'agent' => 'claude'];
+        $ok = $call(['operation' => 'site.status', 'input' => []], $admin);
+        $this->assertSame(200, $ok->status, $ok->body);
+        $this->assertSame('example', json_decode($ok->body, true)['result']['site']);
+        $this->assertSame(401, $call(['operation' => 'site.status'], $admin, signWith: str_repeat('z', 40))->status);
+        $this->assertSame(401, $call(['operation' => 'site.status'], $admin, time: time() - 600)->status);
+        $nonce = bin2hex(random_bytes(12));
+        $this->assertSame(200, $call(['operation' => 'site.status'], $admin, nonce: $nonce)->status);
+        $this->assertSame('nonce_reused', json_decode($call(['operation' => 'site.status'], $admin, nonce: $nonce)->body, true)['error']);
+        $denied = $call(['operation' => 'cache.purge'], ['member' => 'm-2', 'level' => 'supracoŭnik']);
+        $this->assertSame([403, 'operation_forbidden'], [$denied->status, json_decode($denied->body, true)['error']]);
+    }
+
+    public function testMigrationsRunOnce(): void
+    {
+        $this->assertSame([], $this->k->migrate());
+    }
+}

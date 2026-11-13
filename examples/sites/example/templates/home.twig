@@ -1,0 +1,6 @@
+{% extends 'layout.twig' %}
+{% block main %}
+<h1>{{ page.fields.title }}</h1>
+{{ page.fields.body|raw }}
+<ul class="news">{% for n in items('news', {limit: 5}) %}<li><a href="{{ n.path }}">{{ n.fields.title }}</a></li>{% endfor %}</ul>
+{% endblock %}

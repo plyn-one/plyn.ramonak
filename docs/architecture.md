@@ -81,8 +81,9 @@ Rules held by construction, not by reminders:
   machine versions stop for it. When the source gets a newer version, an edited translation is marked stale, not replaced.
 - A route's path is unique per site; changing an item's path keeps the old path as a 301 to the new one.
 
-The kinds of content of a site (their fields, which are translatable, their template) are declared in the site's
-repository, `kinds.toml`, and read with the site's configuration. A new kind needs no migration.
+The kinds of content of a site (their fields, which are translatable, their template), its domains and languages are
+declared in the site's directory, `site.json`, which `bin/ramonak site:sync <site>` writes into the database and the
+engine keeps compiled as PHP for OPcache. A new kind needs no migration.
 
 ## 5. Operations
 
@@ -97,9 +98,11 @@ Every operation that changes something writes an `event` in the same transaction
 
 ## 6. Agents and people: through Klučnik
 
-Agents do not log in to a site. The Klučnik of the owner's frame gets a tool `site`; the site keeps the hash of a key
-that Klučnik holds as a secret. Klučnik signs each request (HMAC over method, path, time and body) and adds who is
-acting (member id, level, agent); the site checks the signature and the time and maps the level to its permissions:
+Agents do not log in to a site. The Klučnik of the owner's frame gets a tool `site`; the site and Klučnik share a bridge
+key (in the installation's `shared/config.php` and in Klučnik's secrets). Klučnik signs each request to
+`POST /_ramonak/api` (HMAC over method, host, path, time, a nonce, the actor and the body; `src/Bridge/Bridge.php`) and
+adds who is acting (member id, level, agent); the site refuses a request older than five minutes or a nonce it has seen,
+and maps the level to its permissions:
 
 | level in Klučnik | may |
 |---|---|
@@ -127,8 +130,12 @@ Every page, by default and without a module of its own:
 - on any installation marked experimental: `X-Robots-Tag: noindex, nofollow` on every response and an empty sitemap.
   Indexing is switched on per site, by an administrator.
 
-Output is cached as whole pages per site, language and path, written on first request and removed by tags when a
-publication, route or template they depend on changes. A release starts with an empty cache.
+A published page is written on its first request as a file under `public/_cache/<host><path>/index.html`, which the
+web server then sends by itself (`public/.htaccess`, written by `bin/ramonak htaccess`): measured on Apache with the
+example site, 0.38 ms at the median against 1.27 ms rendered by PHP. Each built page records what it was made from
+(an item, or a list of a kind); a publication, a move or a rollback removes exactly those pages, and the next request
+builds them again. A release starts with an empty cache. The same measurement on the hosting (A-Rozum/rudy, October 2026)
+gave 0.49 ms for a file and 4 to 5 ms for a page rendered from the database, which is why built pages come first.
 
 ## 8. Translation
 
