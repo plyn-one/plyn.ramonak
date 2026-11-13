@@ -64,7 +64,7 @@ final class Renderer
         try {
             return $this->env($site)->render($template, ['site' => ['key' => $site->key, 'name' => $site->name($lang), 'lang' => $lang],
                 'seo' => ['title' => $site->name($lang), 'description' => '', 'canonical' => $site->url('/'), 'alternates' => [], 'x_default' => null,
-                    'indexable' => false, 'locale' => $lang]]);
+                    'indexable' => false, 'locale' => $lang, 'og_type' => 'website', 'site_name' => $site->name($lang), 'image' => null, 'jsonld' => null]]);
         } catch (\Twig\Error\LoaderError) {
             return '<!doctype html><title>404</title><h1>404</h1>';
         }
@@ -93,6 +93,8 @@ final class Renderer
             // x-default: the root that chooses a language, where every language has its prefix; otherwise the default language
             'x_default' => count($alternates) > 1 ? ($site->prefixedOnly() && $path === $this->routes->homePath($site, $lang) ? $site->url('/') : ($default ?? $alternates[0]['url'])) : null,
             'indexable' => $site->indexable && !$this->experimental && $open, 'locale' => $lang,
+            'og_type' => is_string($site->declaration['kinds'][$kind]['schema'] ?? null) ? 'article' : 'website', 'site_name' => $site->name($lang),
+            'image' => !empty($fields['image']) ? $site->url('/' . ltrim((string) $fields['image'], '/')) : (isset($site->declaration['image']) ? $site->url('/' . ltrim((string) $site->declaration['image'], '/')) : null),
             'jsonld' => $this->jsonLd($site, $itemId, $kind, $lang, $path, $fields, $publishedAt, $title)];
     }
 

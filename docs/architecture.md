@@ -152,6 +152,17 @@ lastmod, read by crawlers, follows it. A publication can be scheduled (`publicat
 the engines of IndexNow (Bing, Yandex and others) of its addresses; the site serves its key at `/<key>.txt`. One scheme
 (https) and one case (lower) answer every address; the others are 301s.
 
+robots.txt carries Yandex's Clean-param for campaign parameters and blocks no AI crawler; responses carry HSTS (not on an
+experimental installation), nosniff, SAMEORIGIN and a referrer policy; the web server compresses text and gives
+versioned assets a year of cache. Open Graph and Twitter cards come with the head. The operation `seo.audit` lists what a
+search engine would find wrong in what is published: pages no text links to, links that lead nowhere or through a
+redirect, missing, duplicate or overlong titles and descriptions, missing dates, machine translations waiting for review.
+
+Left out on purpose, as outdated or of no effect: the Host and Crawl-delay directives of robots.txt (Yandex reads 301s
+and its Webmaster settings), Yandex's Original texts (closed), keyword density and the keywords meta tag, a canonical of
+later list pages to the first (each page of a list is its own canonical), FAQ markup for rich results (ended on 7 May
+2026), llms.txt and AI-specific markup.
+
 ## 8. Translation
 
 When a source version is published, a `translation` job is queued for each language of the site with machine translation

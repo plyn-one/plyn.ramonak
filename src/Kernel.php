@@ -93,6 +93,11 @@ final class Kernel
             $response->headers['X-Robots-Tag'] = 'noindex, nofollow';
         }
         $response->headers['X-Content-Type-Options'] = 'nosniff';
+        $response->headers['X-Frame-Options'] = 'SAMEORIGIN';
+        $response->headers['Referrer-Policy'] = 'strict-origin-when-cross-origin';
+        if (!$this->config->experimental()) {
+            $response->headers['Strict-Transport-Security'] = 'max-age=31536000';
+        }
         return $response;
     }
 

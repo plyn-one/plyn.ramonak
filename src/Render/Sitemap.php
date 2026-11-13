@@ -43,6 +43,10 @@ final class Sitemap
         if ($this->experimental || !$site->indexable) {
             return "User-agent: *\nDisallow: /\n";
         }
-        return "User-agent: *\nAllow: /\nDisallow: /_ramonak/\n\nSitemap: " . $site->url('/sitemap.xml') . "\n";
+        // Clean-param: Yandex drops these parameters, so an address shared with a campaign tag is not a second page
+        // (Google reads the canonical instead). AI crawlers are not blocked: being cited in answers is wanted.
+        return "User-agent: *\nAllow: /\nDisallow: /_ramonak/\n\nUser-agent: Yandex\nAllow: /\nDisallow: /_ramonak/\n"
+            . "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&gclid&fbclid&_openstat&from&ref\n\n"
+            . "Sitemap: " . $site->url('/sitemap.xml') . "\n";
     }
 }

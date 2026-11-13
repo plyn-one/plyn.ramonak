@@ -64,3 +64,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "The owner corrected the dates: a reader cares on what date a material was true, not when it reached a server; old articles of the site, interviews and posts are published with their own dates, and a material revised in substance shows its date of update. dateModified is now the field updated when the material was revised, else its date; a move or a republication dates nothing; the time of publication on this server stays an internal record and the sitemap's lastmod. 14 tests, 94 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "Read with the owner: five Russian guides at the top of search for technical SEO (sostav.ru twice, kokoc, habr, ingate) and the features of Yoast SEO Premium. New for the engine and added: Yandex Clean-param for campaign parameters, security headers (HSTS outside an experimental installation, nosniff, SAMEORIGIN, referrer policy), compression and a year of cache for versioned assets, Open Graph type, site name and image with a Twitter card, and the operation seo.audit (orphans, broken links and links through redirects, missing, duplicate and long titles and descriptions, missing dates, translations waiting for review), the counterpart of what Yoast sells. Outdated in those guides and left out: Host and Crawl-delay, Original texts of Yandex, FID, keyword density and LSI, TIC, a canonical of later list pages to the first, frames and Flash. 15 tests, 102 assertions."

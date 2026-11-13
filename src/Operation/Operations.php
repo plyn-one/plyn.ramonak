@@ -39,6 +39,7 @@ final class Operations
         'cache.purge' => ['davierany', 'cachePurge', true],
         'job.list' => ['davierany', 'jobList', false],
         'event.list' => ['davierany', 'eventList', false],
+        'seo.audit' => ['supracoŭnik', 'seoAudit', false],
     ];
 
     public function __construct(
@@ -380,6 +381,86 @@ final class Operations
         $state = (string) ($input['state'] ?? '');
         return ['jobs' => $this->db->all('SELECT id, kind, payload, state, attempts, run_after, result, created_at FROM job'
             . ($state !== '' ? ' WHERE state = ?' : '') . ' ORDER BY id DESC LIMIT 100', $state !== '' ? [$state] : [])];
+    }
+
+    /**
+     * What a search engine would find wrong in what is published: pages no other page links to, internal links that lead
+     * nowhere or through a redirect, missing, duplicate or overlong titles and descriptions, a missing date where the kind
+     * has one, machine translations waiting for review.
+     */
+    private function seoAudit(Site $site, Actor $actor, array $input): array
+    {
+        $pages = $this->db->all("SELECT i.id, i.item_key, i.kind, r.lang, r.path, v.fields, v.origin FROM route r
+            JOIN item i ON i.id = r.item_id JOIN publication p ON p.item_id = r.item_id AND p.lang = r.lang AND p.current = 1
+            JOIN item_version v ON v.id = p.version_id WHERE r.site_id = ? AND r.status = 200 ORDER BY r.path", [$site->id]);
+        $routes = [];
+        foreach ($this->db->all('SELECT path, status FROM route WHERE site_id = ?', [$site->id]) as $r) {
+            $routes[$r['path']] = (int) $r['status'];
+        }
+        $inbound = [];
+        $issues = ['broken_links' => [], 'links_through_redirect' => [], 'title_missing' => [], 'title_too_long' => [], 'title_duplicate' => [],
+            'description_missing' => [], 'description_too_long' => [], 'date_missing' => [], 'orphans' => [], 'machine_waiting_review' => []];
+        $titles = [];
+        $hosts = array_keys($site->domains);
+        foreach ($pages as $p) {
+            $fields = json_decode((string) $p['fields'], true);
+            $title = trim((string) ($fields['seo_title'] ?? $fields['title'] ?? ''));
+            if ($title === '') {
+                $issues['title_missing'][] = $p['path'];
+            } elseif (mb_strlen($title) > 70) {
+                $issues['title_too_long'][] = ['path' => $p['path'], 'length' => mb_strlen($title)];
+            }
+            $titles[$p['lang'] . "\n" . mb_strtolower($title)][] = $p['path'];
+            $description = trim((string) ($fields['description'] ?? ''));
+            if ($description === '') {
+                $issues['description_missing'][] = $p['path'];
+            } elseif (mb_strlen($description) > 170) {
+                $issues['description_too_long'][] = ['path' => $p['path'], 'length' => mb_strlen($description)];
+            }
+            if (isset($site->kind((string) $p['kind'])['fields']['date']) && empty($fields['date'])) {
+                $issues['date_missing'][] = $p['path'];
+            }
+            if ($p['origin'] === 'machine') {
+                $issues['machine_waiting_review'][] = $p['path'];
+            }
+            foreach ($fields as $value) {
+                if (!is_string($value) || !preg_match_all('#href="([^"\#?]+)#i', $value, $m)) {
+                    continue;
+                }
+                foreach ($m[1] as $href) {
+                    $u = parse_url(html_entity_decode($href));
+                    if (isset($u['host']) && !in_array(strtolower($u['host']), $hosts, true)) {
+                        continue;
+                    }
+                    $target = '/' . trim(rawurldecode($u['path'] ?? '/'), '/');
+                    $status = $routes[$target] ?? null;
+                    if ($status === null || $status === 410) {
+                        $issues['broken_links'][] = ['from' => $p['path'], 'to' => $target];
+                    } elseif ($status !== 200) {
+                        $issues['links_through_redirect'][] = ['from' => $p['path'], 'to' => $target];
+                    } else {
+                        $inbound[$target] = true;
+                    }
+                }
+            }
+        }
+        foreach ($titles as $paths) {
+            if (count($paths) > 1) {
+                $issues['title_duplicate'][] = $paths;
+            }
+        }
+        $homes = array_map(fn ($l) => $site->home($l), array_keys($site->languages));
+        foreach ($pages as $p) {
+            if (!isset($inbound[$p['path']]) && !in_array($p['path'], $homes, true)) {
+                $issues['orphans'][] = $p['path'];
+            }
+        }
+        // review waits only where the site asks for it
+        if (\Ramonak\Content\Indexing::reviewsNeeded($site) === 0) {
+            $issues['machine_waiting_review'] = [];
+        }
+        return ['pages' => count($pages), 'note' => 'orphans count links in the texts of pages; menus and lists of the templates also link',
+            'issues' => array_filter($issues, fn ($v) => $v !== [])];
     }
 
     private function eventList(Site $site, Actor $actor, array $input): array

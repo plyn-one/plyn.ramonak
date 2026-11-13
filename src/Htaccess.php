@@ -11,7 +11,8 @@ final class Htaccess
 {
     public static function render(bool $experimental, string $cacheDir = '_cache'): string
     {
-        $robots = $experimental ? "\n<IfModule mod_headers.c>\n  Header always set X-Robots-Tag \"noindex, nofollow\"\n</IfModule>\n" : '';
+        $robots = $experimental ? "\n<IfModule mod_headers.c>\n  Header always set X-Robots-Tag \"noindex, nofollow\"\n</IfModule>\n"
+            : "\n<IfModule mod_headers.c>\n  Header always set Strict-Transport-Security \"max-age=31536000\"\n</IfModule>\n";
         return <<<HT
 # Written by bin/ramonak htaccess; change the configuration and write it again instead of editing it.
 Options -Indexes -MultiViews
@@ -47,6 +48,22 @@ AddDefaultCharset utf-8
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^ index.php [L]
 </IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/xml application/javascript application/json image/svg+xml
+</IfModule>
+
+<FilesMatch "\\.(css|js|webp|avif|png|jpe?g|svg|woff2)$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </IfModule>
+</FilesMatch>
 
 <FilesMatch "\\.html$">
   <IfModule mod_headers.c>

@@ -270,6 +270,24 @@ final class KernelTest extends TestCase
         $this->assertContains(['/services/asylum'], $sent, 'a publication tells IndexNow');
     }
 
+    public function testTheAuditFindsWhatASearchEngineWould(): void
+    {
+        $this->page('home', 'home', '/', ['title' => 'Бюро', 'description' => 'Адвокаты']);
+        $this->page('a', 'page', '/a', ['title' => 'Убежище', 'description' => 'x', 'body' => '<a href="/b">b</a> <a href="/gone">g</a> <a href="https://example.test/old">o</a>']);
+        $this->page('b', 'page', '/b', ['title' => 'убежище', 'body' => str_repeat('x', 10)]);
+        $this->op('redirect.set', ['path' => '/old', 'target' => '/b']);
+        $issues = $this->op('seo.audit', [])['issues'];
+        $this->assertSame([['from' => '/a', 'to' => '/gone']], $issues['broken_links']);
+        $this->assertSame([['from' => '/a', 'to' => '/old']], $issues['links_through_redirect']);
+        $this->assertSame([['/a', '/b']], $issues['title_duplicate']);
+        $this->assertSame(['/b'], $issues['description_missing']);
+        $this->assertSame(['/a'], $issues['orphans']);
+        $robots = $this->get('/robots.txt')->body;
+        $this->assertStringContainsString('Clean-param: utm_source&', $robots);
+        $this->assertSame('max-age=31536000', $this->get('/a')->headers['Strict-Transport-Security']);
+        $this->assertStringContainsString('<meta property="og:type" content="website">', $this->get('/a')->body);
+    }
+
     public function testExperimentalInstallationIsClosedToIndexing(): void
     {
         $this->page('home', 'home', '/', ['title' => 'Бюро']);
