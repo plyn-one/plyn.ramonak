@@ -143,9 +143,11 @@ gave 0.49 ms for a file and 4 to 5 ms for a page rendered from the database, whi
 
 Structured data (JSON-LD): the organization of the site (site.json `schema.organization`, such as LegalService) on its
 home pages, and the type a kind declares (`schema`: Article, NewsArticle, BlogPosting) with headline, author, dates and
-publisher. The date of an article is its own field `date`, the date of the event or of the original publication, so a text
-added now about a past event carries its true date; the record of when it was published stays as it happened, and
-dateModified and the sitemap's lastmod follow it. A publication can be scheduled (`publication.publish` with `at`, or
+publisher. The dates a reader and a search engine see are the material's own: `date`, the date it belongs to (of the
+interview, of the original article, of the post it was in), and `updated`, set only when it was revised in substance and
+shown as such; without it dateModified is `date`. Moving a material between sites or fixing a typo dates nothing. When it
+reached this server is an internal record of publications, for rollback and for who did what, and only the sitemap's
+lastmod, read by crawlers, follows it. A publication can be scheduled (`publication.publish` with `at`, or
 `publication.schedule`): the job publish runs it within a minute of its time. Every publication, move and removal tells
 the engines of IndexNow (Bing, Yandex and others) of its addresses; the site serves its key at `/<key>.txt`. One scheme
 (https) and one case (lower) answer every address; the others are 301s.

@@ -1,5 +1,6 @@
 {% extends 'layout.twig' %}
 {% block main %}
 <h1>{{ page.fields.title }}</h1>
+{% if page.fields.date %}<p class="dates"><time datetime="{{ page.fields.date }}">{{ page.fields.date }}</time>{% if page.fields.updated %}, обновлено <time datetime="{{ page.fields.updated }}">{{ page.fields.updated }}</time>{% endif %}</p>{% endif %}
 {{ page.fields.body|raw }}
 {% endblock %}

@@ -98,9 +98,10 @@ final class Renderer
 
     /**
      * Structured data as schema.org JSON-LD: the organization of the site (site.json schema.organization) on its home pages,
-     * and the kind's own type (kinds.<kind>.schema: Article, NewsArticle, BlogPosting, WebPage) with its dates: datePublished
-     * is the field date when the kind has it (the date of the event or of the original publication), else the first
-     * publication in this language; dateModified is the current publication.
+     * and the kind's own type (kinds.<kind>.schema: Article, NewsArticle, BlogPosting, WebPage) with its dates, the ones a
+     * reader sees: datePublished is the field date (the date the material belongs to: of the interview, of the original
+     * article), else the first publication in this language; dateModified is the field updated, set only when the material
+     * was revised in substance, else the same as datePublished. Moving a text between servers or fixing a typo dates nothing.
      */
     private function jsonLd(Site $site, int $itemId, string $kind, string $lang, string $path, array $fields, int $publishedAt, string $title): ?string
     {
@@ -112,9 +113,10 @@ final class Renderer
         $type = $site->declaration['kinds'][$kind]['schema'] ?? null;
         if (is_string($type)) {
             $first = (int) ($this->db->value('SELECT MIN(published_at) FROM publication WHERE item_id = ? AND lang = ?', [$itemId, $lang]) ?? $publishedAt);
+            $published = isset($fields['date']) && is_string($fields['date']) ? $fields['date'] : gmdate('c', $first);
             $node = ['@type' => $type, 'headline' => (string) ($fields['title'] ?? $title), 'inLanguage' => $lang, 'mainEntityOfPage' => $site->url($path),
-                'datePublished' => isset($fields['date']) && is_string($fields['date']) ? $fields['date'] : gmdate('c', $first),
-                'dateModified' => gmdate('c', $publishedAt)];
+                'datePublished' => $published,
+                'dateModified' => isset($fields['updated']) && is_string($fields['updated']) ? $fields['updated'] : $published];
             if (!empty($fields['description'])) {
                 $node['description'] = (string) $fields['description'];
             }

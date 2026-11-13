@@ -249,7 +249,10 @@ final class KernelTest extends TestCase
         $article = $ld['@graph'][0];
         $this->assertSame(['NewsArticle', '2019-03-04', 'Анна', 'LegalService'], [$article['@type'], $article['datePublished'], $article['author']['name'], $article['publisher']['@type']],
             'the date of the article is its own field; the record of when it was published stays true');
-        $this->assertStringStartsWith(gmdate('Y-m-d'), $article['dateModified']);
+        $this->assertSame('2019-03-04', $article['dateModified'], 'moved or republished, a material keeps its own date');
+        $this->op('content.save', ['item' => 'n1', 'lang' => 'ru', 'fields' => ['title' => 'Дело', 'date' => '2019-03-04', 'updated' => '2026-11-14', 'author' => 'Анна'], 'publish' => true]);
+        $ld = json_decode(preg_replace('#^.*<script type="application/ld\+json">(.*?)</script>.*$#s', '$1', $this->get('/news/old-case')->body), true);
+        $this->assertSame(['2019-03-04', '2026-11-14'], [$ld['@graph'][0]['datePublished'], $ld['@graph'][0]['dateModified']], 'a revision in substance dates itself');
         $s2 = $this->op('publication.schedule', ['item' => 'n1', 'lang' => 'ru', 'at' => time() + 600]);
         $this->assertSame($s2['scheduled'], $this->op('publication.unschedule', ['job' => $s2['scheduled']])['cancelled']);
     }
