@@ -46,3 +46,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "Asked by the owner whether publication is tied to Russian: it is not meant to be, and one place made it so; fixed. The source language is the item's own, the language its first text was written in; a text in another language is a translation (edited) unless the caller says it is now the source; every other language of the site with machine translation on gets a machine version at the source path under its prefix, the default language included; x-default falls back to the first published language when the default has none. A test writes an item first in English and gets it in Russian and Belarusian: 10 tests, 65 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "The owner decided for michalevic.org: every language with its prefix, Russian too (/ru/…), the old unprefixed addresses kept as 301s to the Russian pages, and English for a visitor whose language the site does not have. A site whose languages all have prefixes now answers its root with a 302 by Accept-Language and its q-values, else its default language, with Vary: Accept-Language and never as a built file; the home pages name the root as x-default, other pages their version in the default language. Tested on the example site prefixed: 11 tests, 75 assertions."

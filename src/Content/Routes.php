@@ -31,6 +31,12 @@ final class Routes
             WHERE r.site_id = ? AND r.path = ?', [$site->id, $path]);
     }
 
+    /** The home path of a language: its prefix alone, or / for the language without one. */
+    public function homePath(Site $site, string $lang): string
+    {
+        return $site->home($lang);
+    }
+
     /** The path an item answers at in a language, if it has one. */
     public function pathOf(int $itemId, string $lang): ?string
     {

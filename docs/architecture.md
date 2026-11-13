@@ -117,6 +117,10 @@ like any other.
 ## 7. Rendering and the SEO contract
 
 A request is resolved: domain to site (an alias redirects to the primary domain), path prefix to language, path to route.
+A site may give every language its prefix (`/ru/…`, `/en/…`); then its root `/` sends a visitor (302, `Vary:
+Accept-Language`, never built as a file) to the first of their browser's languages it has, else to its default language,
+which a search engine also gets; the home pages name the root as `x-default`, other pages the version in the default
+language. Old addresses without a prefix are kept as 301s to their new pages.
 A route to an item renders its published version with the kind's template; a redirect answers with its code; nothing
 found answers 404 with the site's page for it.
 

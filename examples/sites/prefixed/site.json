@@ -1,0 +1,18 @@
+{
+  "key": "prefixed",
+  "name": {"ru": "Бюро", "be": "Бюро", "en": "Bureau"},
+  "default_language": "en",
+  "indexable": true,
+  "templates": "../example/templates",
+  "domains": {"prefixed.test": "primary"},
+  "languages": [
+    {"lang": "ru", "prefix": "ru"},
+    {"lang": "be", "prefix": "be"},
+    {"lang": "en", "prefix": "en"}
+  ],
+  "kinds": {
+    "home": {"template": "home.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "body": {"type": "html"}}},
+    "page": {"template": "page.twig", "fields": {"title": {"type": "text", "required": true}, "description": {"type": "text"}, "body": {"type": "html"}}},
+    "news": {"template": "page.twig", "fields": {"title": {"type": "text", "required": true}, "date": {"type": "date", "translate": false}, "body": {"type": "html"}}}
+  }
+}

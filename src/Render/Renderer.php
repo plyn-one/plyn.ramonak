@@ -83,7 +83,9 @@ final class Renderer
             $title .= ' | ' . $site->name($lang);
         }
         return ['title' => $title, 'description' => (string) ($fields['description'] ?? ''), 'canonical' => $site->url($path),
-            'alternates' => count($alternates) > 1 ? $alternates : [], 'x_default' => count($alternates) > 1 ? ($default ?? $alternates[0]['url']) : null,
+            'alternates' => count($alternates) > 1 ? $alternates : [],
+            // x-default: the root that chooses a language, where every language has its prefix; otherwise the default language
+            'x_default' => count($alternates) > 1 ? ($site->prefixedOnly() && $path === $this->routes->homePath($site, $lang) ? $site->url('/') : ($default ?? $alternates[0]['url'])) : null,
             'indexable' => $site->indexable && !$this->experimental, 'locale' => $lang];
     }
 

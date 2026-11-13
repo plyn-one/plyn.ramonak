@@ -62,3 +62,5 @@ kola = "usie"
 "file:src/Sites.php" = { faza = "ściah", rola = "prajava" }
 "file:templates/head.twig" = { faza = "ściah", rola = "prajava" }
 "file:tests/KernelTest.php" = { faza = "ściah", rola = "prajava" }
+"dir:examples/sites/prefixed" = { faza = "ściah", rola = "prajava" }
+"file:examples/sites/prefixed/site.json" = { faza = "ściah", rola = "prajava" }

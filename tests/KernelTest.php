@@ -176,6 +176,31 @@ final class KernelTest extends TestCase
         $this->assertSame('edited', $ru['origin'], 'a text in another language is a translation');
     }
 
+    public function testEveryLanguageHasItsPrefixAndTheRootChoosesForTheVisitor(): void
+    {
+        $this->site = $this->k->sites->sync('prefixed');
+        $get = fn (string $path, string $accept = '') => $this->k->handle(new Request('GET', 'prefixed.test', $path, '', $accept === '' ? [] : ['accept-language' => $accept]));
+        $this->op('content.create', ['item' => 'home', 'kind' => 'home', 'lang' => 'ru', 'path' => '/ru']);
+        $this->op('content.save', ['item' => 'home', 'lang' => 'ru', 'fields' => ['title' => 'Бюро'], 'publish' => true]);
+        $this->op('content.create', ['item' => 'asylum', 'kind' => 'page', 'lang' => 'ru', 'path' => '/ru/services/asylum']);
+        $this->op('content.save', ['item' => 'asylum', 'lang' => 'ru', 'fields' => ['title' => 'Убежище'], 'publish' => true]);
+        $this->k->queue->run($this->k->jobHandlers());
+        foreach (['' => '/en', 'ru-RU,ru;q=0.9,en;q=0.8' => '/ru', 'de-DE,de;q=0.9,be;q=0.5' => '/be', 'fr' => '/en', 'en;q=0.1,ru;q=0.2' => '/ru'] as $accept => $to) {
+            $r = $get('/', $accept);
+            $this->assertSame([302, 'https://prefixed.test' . $to, 'Accept-Language'], [$r->status, $r->headers['Location'], $r->headers['Vary']], "Accept-Language: {$accept}");
+        }
+        $this->assertFileDoesNotExist($this->dir . '/public/_cache/prefixed.test/index.html', 'the root is never a built file');
+        $home = $get('/ru')->body;
+        $this->assertStringContainsString('hreflang="x-default" href="https://prefixed.test/"', $home, 'the home pages point x-default to the root');
+        $page = $get('/en/services/asylum');
+        $this->assertSame(200, $page->status);
+        $this->assertStringContainsString('hreflang="x-default" href="https://prefixed.test/en/services/asylum"', $page->body, 'other pages: the English one');
+        // the old unprefixed addresses lead to the Russian pages
+        $this->op('redirect.import', ['redirects' => [['path' => '/services/asylum', 'target' => '/ru/services/asylum']]]);
+        $old = $get('/services/asylum');
+        $this->assertSame([301, 'https://prefixed.test/ru/services/asylum'], [$old->status, $old->headers['Location']]);
+    }
+
     public function testExperimentalInstallationIsClosedToIndexing(): void
     {
         $this->page('home', 'home', '/', ['title' => 'Бюро']);

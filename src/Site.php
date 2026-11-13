@@ -57,6 +57,44 @@ final class Site
         return $this->defaultLanguage;
     }
 
+    /** Whether every language has its prefix, so that the root chooses a language for the visitor. */
+    public function prefixedOnly(): bool
+    {
+        foreach ($this->languages as $l) {
+            if ($l['prefix'] === '') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * The language the root sends a visitor to: the first of their browser's languages the site has, by Accept-Language
+     * and its q-values; otherwise the site's default language, which is also x-default for search engines.
+     */
+    public function negotiate(?string $acceptLanguage): string
+    {
+        $wanted = [];
+        foreach (explode(',', (string) $acceptLanguage) as $i => $part) {
+            if (preg_match('/^\s*([A-Za-z]{1,8})(?:-[A-Za-z0-9]{1,8})*\s*(?:;\s*q\s*=\s*([0-9.]+))?\s*$/', $part, $m)) {
+                $wanted[] = [strtolower($m[1]), isset($m[2]) ? (float) $m[2] : 1.0, $i];
+            }
+        }
+        usort($wanted, fn ($a, $b) => [$b[1], $a[2]] <=> [$a[1], $b[2]]);
+        foreach ($wanted as [$lang, $q]) {
+            if ($q > 0 && isset($this->languages[$lang])) {
+                return $lang;
+            }
+        }
+        return $this->defaultLanguage;
+    }
+
+    public function home(string $lang): string
+    {
+        $prefix = $this->languages[$lang]['prefix'] ?? '';
+        return $prefix === '' ? '/' : '/' . $prefix;
+    }
+
     public function url(string $path): string
     {
         return 'https://' . $this->primaryDomain() . $path;

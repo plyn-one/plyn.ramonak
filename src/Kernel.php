@@ -111,6 +111,12 @@ final class Kernel
             return $this->notFound($site, $site->defaultLanguage);
         }
         $route = $this->routes->resolve($site, $path);
+        if ($route === null && $path === '/' && $site->prefixedOnly()) {
+            // the root of a site whose languages all have prefixes chooses one for the visitor: their browser's, else the
+            // default (x-default); never built as a file, as it differs by visitor
+            $to = $site->home($site->negotiate($request->header('accept-language')));
+            return new Response(302, '', ['Location' => $site->url($to), 'Vary' => 'Accept-Language', 'Cache-Control' => 'private, no-store']);
+        }
         if ($route === null) {
             return $this->notFound($site, $site->language($path));
         }
