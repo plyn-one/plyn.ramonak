@@ -1,0 +1,30 @@
+[[zapis]]
+faza = "dadzienaść"
+"hłybinia" = 2
+vynik = "Ramonak: a web engine of Plyń on which the owners of the system make and keep their sites without scaffolding: a one-page site takes only its minimum, a large application adds modules without a rewrite of the kernel. Its first slice serves the new site of the Michalevič law office (michalevic.org) in Belarusian, Russian and English."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [1, 1]
+vynik = "The owner of Legal Status decided on 13 November 2026: a new engine made anew in plyn-one, open (MIT, as plyn.prastora), named Ramonak; about ten sites of the company soon, the first michalevic.org, rebuilt in content, structure and design on Prastora, moved from MODX on another host to this engine on Spaceship; texts in a database, not in a repository, as the site grows into a blog, commentary and interviews; languages per site without a limit, be/ru/en first and cs later; a missing translation served as a machine translation, which an edited text replaces and a change of its source marks for review; an agent checks and publishes, a person with a role reviews when he likes, through an agent or later by hand, and no acceptance is final. Source of lessons: A-Rozum/rudy (PHP, Fenom, MariaDB on expertise-law.eu): a technical SEO contract by default, enquiries without CAPTCHA, releases with rollback, site contexts, localized revisions, noindex on every experimental installation."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [1, 2]
+vynik = "Inside: a small kernel (routing, language, rendering, configuration, composition of modules); modules with declared resources and extension points, none of which silently overrides another; one set of operations used by agents, a later administration and an API; data only through a layer of access, never SQL in templates; a queue of background jobs from the start; revisions, publications with who published and reviewed them, and rollback; sites, languages, kinds of content and language versions with their origin (machine or edited) and the source revision they follow; addresses and redirects; the SEO contract; no dependence on one host. Outside: the content, templates, settings and design of each site, which are its owner's; page layout (plyn.prastora); keys and roles (the frame's Klučnik, whose tool site will reach a site's operations); model calls for translation (Klučnik's model route and its monthly limit); hosting."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [1, 3]
+vynik = "Measured before founding: nothing of this place exists. michalevic.org: 101 addresses in its sitemap, last submitted in 2017, 66 indexed by Google; in the three months to 12 November 2026 the home page had 88 clicks of 1566 impressions, then about-us, services/asylum, contacts and a few news articles; some indexed addresses carry /en/. A-Rozum/rudy has passed SQLite and MariaDB checks and serves Association and member pages on expertise-law.eu, its first slice not yet accepted by its owner."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2, 1]
+"čakańnie" = "A test installation of Ramonak, with noindex, serves michalevic.org from its database in be, ru and en: a page with no edited translation is served as a machine translation and an edited one replaces it; every address Google indexed answers 200 or 301 to its new page; an agent publishes and rolls back a page through the tool site of the Legal Status Klučnik, with the history kept; its pages pass the Prastora check and score 100 in Lighthouse SEO."
+"mieryła" = "ahient"
+"upeŭnienaść" = 0.5

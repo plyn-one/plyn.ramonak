@@ -1,0 +1,10 @@
+["apisańnie"]
+"uvachod" = "plyn.ramonak: Ramonak, the web engine of Plyń, open to every owner: a small PHP kernel and modules under explicit contracts, on which owners make and keep their sites, from a one-page site to a large application, in many languages, worked on by agents through the Klučnik of their frame."
+"kirunak" = "Start with AGENTS.md and vyhlad.md of plyn-one/plyn, then the first whole of śled.toml: its direction is where work here begins. Pages are laid out with plyn-one/plyn.prastora; the content, templates and settings of each site belong to its owner and live in the owner's repository and database (for Legal Status: Legal-Status-UAB/sites); keys and roles are the frame's Klučnik's. A-Rozum/rudy, the engine made on the previous version of the system, is only a source of lessons. Open questions of this place are kept in plyn-one/plyn.laba."
+
+["samaadrasavańnie"]
+"file:AGENTS.md" = "the orientation of this place, written by plyn.dojlid"
+"file:miesca.toml" = "the registry of this place: the answers of its constituents"
+"file:śled.toml" = "the work of this place, one zapis per krok"
+"dir:pračytańnie" = "the readings of this place, one file per language"
+"file:pračytańnie/en.toml" = "the readings of this place in English"
