@@ -38,6 +38,7 @@ final class Operations
         'translation.request' => ['davierany', 'translationRequest', true],
         'cache.purge' => ['davierany', 'cachePurge', true],
         'job.list' => ['davierany', 'jobList', false],
+        'job.cancel' => ['davierany', 'jobCancel', true],
         'event.list' => ['davierany', 'eventList', false],
         'seo.audit' => ['supracoŭnik', 'seoAudit', false],
     ];
@@ -374,6 +375,21 @@ final class Operations
     private function cachePurge(Site $site, Actor $actor, array $input): array
     {
         return ['pages_removed' => $this->cache->purgeSite($site->id)];
+    }
+
+    /** A job still queued is cancelled: it is not claimed again. A job running, done or failed is left as it is. */
+    private function jobCancel(Site $site, Actor $actor, array $input): array
+    {
+        $id = (int) self::need($input, 'id');
+        $state = (string) $this->db->value('SELECT state FROM job WHERE id = ?', [$id]);
+        if ($state === '') {
+            throw new OperationError('job_unknown', "No job {$id}", 404);
+        }
+        if ($state !== 'queued') {
+            throw new OperationError('job_not_queued', "Job {$id} is {$state}; only a queued job can be cancelled");
+        }
+        $this->db->exec("UPDATE job SET state = 'cancelled', result = 'cancelled by an administrator', locked_until = NULL WHERE id = ? AND state = 'queued'", [$id]);
+        return ['id' => $id, 'state' => 'cancelled'];
     }
 
     private function jobList(Site $site, Actor $actor, array $input): array
