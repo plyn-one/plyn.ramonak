@@ -137,5 +137,54 @@
         }
       }
     }
+  },
+  "forms": {
+    "contact": {
+      "title": {
+        "en": "Contact form",
+        "ru": "Форма связи"
+      },
+      "notify": [
+        "office@example.test"
+      ],
+      "honeypot": "website",
+      "fields": {
+        "name": {
+          "type": "text",
+          "required": true,
+          "max": 120,
+          "label": {
+            "en": "Name",
+            "ru": "Имя"
+          }
+        },
+        "contact": {
+          "type": "text",
+          "required": true,
+          "max": 200,
+          "label": {
+            "en": "Email, phone or messenger",
+            "ru": "Email, телефон или мессенджер"
+          }
+        },
+        "message": {
+          "type": "textarea",
+          "required": true,
+          "max": 5000,
+          "label": {
+            "en": "Message",
+            "ru": "Сообщение"
+          }
+        },
+        "consent": {
+          "type": "checkbox",
+          "required": true,
+          "label": {
+            "en": "Consent",
+            "ru": "Согласие"
+          }
+        }
+      }
+    }
   }
 }

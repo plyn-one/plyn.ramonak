@@ -68,3 +68,11 @@ kola = "usie"
 "file:examples/sites/prefixed/site.json" = { faza = "ściah", rola = "prajava" }
 "file:src/Content/Indexing.php" = { faza = "ściah", rola = "prajava" }
 "file:src/Jobs/IndexNow.php" = { faza = "ściah", rola = "prajava" }
+"dir:src/Forms" = { faza = "ściah", rola = "prajava" }
+"file:migrations/002-forms.sql" = { faza = "ściah", rola = "prajava" }
+"file:src/Forms/Forms.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Forms/Notify.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Forms/Mailer.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Forms/SendmailMailer.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Forms/SmtpMailer.php" = { faza = "ściah", rola = "prajava" }
+"file:tests/FormsTest.php" = { faza = "ściah", rola = "prajava" }

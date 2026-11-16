@@ -92,7 +92,13 @@ operations serve agents, a later administration interface and an API; none of th
 
 First slice: `site.status`, `content.list`, `content.read`, `content.save` (a new version), `publication.publish`,
 `publication.rollback`, `review.add`, `route.set`, `redirect.set`, `redirect.import`, `media.add`, `translation.request`,
-`form.list`, `cache.purge`, `job.list`.
+`form.list`, `form.delete`, `cache.purge`, `job.list`.
+
+Forms: a site declares its forms in `site.json` under `forms` (fields with type, limit and label per language, the
+addresses to notify, a trap field for robots). A form posts to `/_ramonak/form/<name>` from the site's own pages; the entry
+is checked, kept in `form_entry` and mailed by the job `form.notify` through the mail of the installation (`mail` in
+`shared/config.php`: the host's sendmail or a mail server), and the visitor returns to the page with `#<name>-sent` or
+`#<name>-error`, so built pages stay the same for everyone.
 
 Every operation that changes something writes an `event` in the same transaction.
 

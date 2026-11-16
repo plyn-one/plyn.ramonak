@@ -7,6 +7,9 @@ use Ramonak\Bridge\Bridge;
 use Ramonak\Content\Content;
 use Ramonak\Content\Publication;
 use Ramonak\Content\Routes;
+use Ramonak\Forms\Forms;
+use Ramonak\Forms\Mailer;
+use Ramonak\Forms\Notify;
 use Ramonak\Http\Request;
 use Ramonak\Http\Response;
 use Ramonak\Jobs\IndexNow;
@@ -39,6 +42,8 @@ final class Kernel
     private ?Translator $translator;
     /** @var (callable(array):string)|null a stand-in for the IndexNow job, for tests */
     public $indexNow = null;
+    /** @var Mailer|null a stand-in for the configured mail, for tests */
+    public ?Mailer $mailer = null;
 
     public function __construct(public readonly Config $config, ?Translator $translator = null)
     {
@@ -79,8 +84,22 @@ final class Kernel
                     'publication.publish', ['item' => $job['item'], 'lang' => $job['lang'], 'version' => $job['version']]);
                 return 'published as publication ' . $done['publication'];
             },
+            'form.notify' => new Notify($this->db, $this->sites, \Closure::fromCallable([$this, 'mailerFor'])),
             'indexnow' => $this->indexNow ?? new IndexNow($this->sites, (array) $this->config->get('indexnow', []), $this->config->experimental()),
         ];
+    }
+
+    /** The mail of a site: its own under mail.sites.<key>, else the installation's; null when none is configured. */
+    public function mailerFor(string $site): ?Mailer
+    {
+        if ($this->mailer !== null) {
+            return $this->mailer;
+        }
+        $mail = (array) $this->config->get('mail', []);
+        $own = $mail['sites'][$site] ?? null;
+        unset($mail['sites']);
+        $c = is_array($own) ? $own : $mail;
+        return isset($c['from']) ? Mailer::fromConfig($c) : null;
     }
 
     private function renderer(): Renderer
@@ -118,6 +137,10 @@ final class Kernel
         }
         if ($request->path === '/_ramonak/api') {
             return (new Bridge($this->db, $this->operations, (array) $this->config->get('bridge', [])))->handle($request, $site);
+        }
+        if (str_starts_with($request->path, '/_ramonak/form/')) {
+            $salt = (string) $this->config->get('forms_salt', hash('sha256', (string) $this->config->require('var_dir') . $site->key));
+            return (new Forms($this->db, $this->queue, $salt))->handle($site, $request, substr($request->path, strlen('/_ramonak/form/')));
         }
         if (!in_array($request->method, ['GET', 'HEAD'], true)) {
             return new Response(405, '', ['Allow' => 'GET, HEAD']);

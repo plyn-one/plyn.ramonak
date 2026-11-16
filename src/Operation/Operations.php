@@ -40,6 +40,8 @@ final class Operations
         'job.list' => ['davierany', 'jobList', false],
         'job.cancel' => ['davierany', 'jobCancel', true],
         'event.list' => ['davierany', 'eventList', false],
+        'form.list' => ['davierany', 'formList', false],
+        'form.delete' => ['davierany', 'formDelete', true],
         'seo.audit' => ['supracoŭnik', 'seoAudit', false],
     ];
 
@@ -397,6 +399,36 @@ final class Operations
         $state = (string) ($input['state'] ?? '');
         return ['jobs' => $this->db->all('SELECT id, kind, payload, state, attempts, run_after, result, created_at FROM job'
             . ($state !== '' ? ' WHERE state = ?' : '') . ' ORDER BY id DESC LIMIT 100', $state !== '' ? [$state] : [])];
+    }
+
+    /** Entries of the site's forms, newest first: what a visitor sent, the page and language, and whether it was mailed. */
+    private function formList(Site $site, Actor $actor, array $input): array
+    {
+        $where = 'site_id = ?';
+        $params = [$site->id];
+        foreach (['form', 'state'] as $key) {
+            if (isset($input[$key]) && $input[$key] !== '') {
+                $where .= " AND {$key} = ?";
+                $params[] = (string) $input[$key];
+            }
+        }
+        $limit = max(1, min(200, (int) ($input['limit'] ?? 50)));
+        $rows = $this->db->all("SELECT id, form, lang, page, fields, state, created_at FROM form_entry WHERE {$where} ORDER BY id DESC LIMIT {$limit}", $params);
+        foreach ($rows as &$row) {
+            $row['fields'] = json_decode((string) $row['fields'], true);
+        }
+        return ['entries' => $rows];
+    }
+
+    /** Removes form entries for good, such as spam or what a visitor asked to be erased; the event keeps only their ids. */
+    private function formDelete(Site $site, Actor $actor, array $input): array
+    {
+        $ids = array_values(array_filter(array_map('intval', (array) ($input['entries'] ?? [])), fn ($i) => $i > 0));
+        if ($ids === []) {
+            throw new OperationError('input_invalid', 'form.delete needs entries: a list of entry ids');
+        }
+        $marks = implode(', ', array_fill(0, count($ids), '?'));
+        return ['deleted' => $this->db->exec("DELETE FROM form_entry WHERE site_id = ? AND id IN ({$marks})", [$site->id, ...$ids]), 'entries' => $ids];
     }
 
     /**

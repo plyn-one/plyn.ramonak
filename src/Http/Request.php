@@ -14,6 +14,7 @@ final class Request
         public readonly array $headers = [],
         public readonly string $body = '',
         public readonly bool $https = true,
+        public readonly string $client = '',
     ) {}
 
     public static function fromGlobals(): self
@@ -32,7 +33,8 @@ final class Request
         $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
         return new self($method, strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? ''))), rawurldecode($path),
             (string) ($_SERVER['QUERY_STRING'] ?? ''), $headers, in_array($method, ['POST', 'PUT', 'PATCH'], true) ? (string) file_get_contents('php://input') : '',
-            ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off' || ($headers['x-forwarded-proto'] ?? '') === 'https');
+            ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off' || ($headers['x-forwarded-proto'] ?? '') === 'https',
+            (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
     }
 
     public function header(string $name): ?string
