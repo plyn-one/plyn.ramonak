@@ -60,6 +60,7 @@
 "file:src/Render/PageCache.php" = "built pages: written atomically as files, removed by what they were made from"
 "file:src/Render/Renderer.php" = "renders a published item with its template and the SEO head; items() and path() for templates; records what a page is made from"
 "file:src/Render/Sitemap.php" = "sitemap.xml with hreflang, and robots.txt; closed on an experimental installation"
+"file:src/Render/TemplateWatch.php" = "the templates a page is made with, the site's and the framework's: their fingerprint names the compiled templates, and once it changes the built pages of the site are removed; the job runner checks it every minute"
 "file:src/Site.php" = "one site: its languages, domains and declared kinds"
 "file:src/Sites.php" = "the sites of an installation: written from site.json, found by host, kept compiled for OPcache"
 "file:templates/head.twig" = "the SEO head every site includes: title, description, canonical, hreflang, robots, Open Graph"

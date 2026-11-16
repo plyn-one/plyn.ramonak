@@ -58,6 +58,7 @@ kola = "usie"
 "file:src/Render/PageCache.php" = { faza = "ściah", rola = "prajava" }
 "file:src/Render/Renderer.php" = { faza = "ściah", rola = "prajava" }
 "file:src/Render/Sitemap.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Render/TemplateWatch.php" = { faza = "ściah", rola = "prajava" }
 "file:src/Site.php" = { faza = "ściah", rola = "prajava" }
 "file:src/Sites.php" = { faza = "ściah", rola = "prajava" }
 "file:templates/head.twig" = { faza = "ściah", rola = "prajava" }
