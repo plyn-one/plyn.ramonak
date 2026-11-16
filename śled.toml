@@ -82,3 +82,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "For the contacts page of michalevic.org the owner of Legal Status chose a form of the engine, shared by every site: added the module forms. A site declares its forms in site.json; POST /_ramonak/form/<name> from its own pages checks the entry, traps robots, limits each address to 5 in 10 minutes, keeps it in form_entry and queues form.notify, which mails it through the host's sendmail or a mail server named in shared/config.php; the visitor returns with #<name>-sent or #<name>-error, so built pages need no script. form.list and form.delete for trusted staff. 25 tests, 155 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "Found on the Legal Status hosting while migrating 002-forms.sql: MariaDB commits DDL by itself, so Db::tx called commit with no transaction open and the command died with exit 255 after the migration had been applied, the depth of transactions going below zero on the way. Db::tx now decrements its depth once and commits only a transaction still open. 25 tests, 155 assertions; the case needs MariaDB and is not reproduced on SQLite."

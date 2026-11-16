@@ -87,16 +87,17 @@ final class Db
         }
         try {
             $result = $work();
-            if (--$this->depth === 0) {
-                $this->pdo->commit();
-            }
-            return $result;
         } catch (\Throwable $error) {
             if (--$this->depth === 0 && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $error;
         }
+        // MariaDB commits DDL by itself and ends the transaction: then there is nothing left to commit
+        if (--$this->depth === 0 && $this->pdo->inTransaction()) {
+            $this->pdo->commit();
+        }
+        return $result;
     }
 
     /** A migration's statements in the dialect of this database: {{ID}}, {{TEXT}}, {{JSON}}, {{NOW}} and engine options. */
