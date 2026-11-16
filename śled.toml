@@ -76,3 +76,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "For michalevic.org the owner set who is who: the site is first of all Ales (Alaksiej) Michalevic, the office has no address of its own, its parent is Legal Status in Vilnius, the client manager's phone and messengers serve both. Added: a kind with schema Person gives a ProfilePage whose main entity is the person, with alternate name, job title, image and sameAs (Wikipedia, profiles) and the organization they work for; values of the site's declaration given per language (an object keyed by language tags) are read in the language of the page, so the organization and its parent speak it. 16 tests, 103 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "For the contacts page of michalevic.org the owner of Legal Status chose a form of the engine, shared by every site: added the module forms. A site declares its forms in site.json; POST /_ramonak/form/<name> from its own pages checks the entry, traps robots, limits each address to 5 in 10 minutes, keeps it in form_entry and queues form.notify, which mails it through the host's sendmail or a mail server named in shared/config.php; the visitor returns with #<name>-sent or #<name>-error, so built pages need no script. form.list and form.delete for trusted staff. 25 tests, 155 assertions."
