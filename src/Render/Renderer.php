@@ -223,9 +223,12 @@ final class Renderer
         if (isset($this->twig[$site->id])) {
             return $this->twig[$site->id];
         }
+        $frameworkDir = dirname(__DIR__, 2) . '/templates';
         $loader = new FilesystemLoader([$site->dir . '/' . ($site->declaration['templates'] ?? 'templates')]);
-        $loader->addPath(dirname(__DIR__, 2) . '/templates', 'ramonak');
-        $twig = new Environment($loader, ['cache' => $this->varDir . '/twig/' . $site->key, 'auto_reload' => $this->autoReload,
+        $loader->addPath($frameworkDir, 'ramonak');
+        // compiled templates live under the fingerprint of the templates: a changed template is compiled again, never a stale one
+        $fingerprint = substr(TemplateWatch::of([$site->dir . '/' . ($site->declaration['templates'] ?? 'templates'), $frameworkDir]), 0, 16);
+        $twig = new Environment($loader, ['cache' => $this->varDir . '/twig/' . $site->key . '/' . $fingerprint, 'auto_reload' => $this->autoReload,
             'strict_variables' => false, 'autoescape' => 'html']);
         $twig->addFunction(new TwigFunction('items', function (array $context, string $kind, array $options = []) use ($site): array {
             return $this->items($site, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $kind, $options);

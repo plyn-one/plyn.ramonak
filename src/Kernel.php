@@ -18,6 +18,7 @@ use Ramonak\Operation\Operations;
 use Ramonak\Render\PageCache;
 use Ramonak\Render\Renderer;
 use Ramonak\Render\Sitemap;
+use Ramonak\Render\TemplateWatch;
 
 /**
  * The kernel: reads the installation's configuration, composes the parts, and answers one request. A published page it
@@ -32,6 +33,7 @@ final class Kernel
     public readonly Routes $routes;
     public readonly PageCache $cache;
     public readonly Queue $queue;
+    public readonly TemplateWatch $templates;
     public readonly Operations $operations;
     private ?Renderer $renderer = null;
     private ?Translator $translator;
@@ -49,6 +51,7 @@ final class Kernel
         $this->routes = new Routes($this->db);
         $this->cache = new PageCache($this->db, (string) $config->require('cache_dir'));
         $this->queue = new Queue($this->db);
+        $this->templates = new TemplateWatch($this->db, $this->sites, $this->cache, $var, dirname(__DIR__) . '/templates');
         $this->operations = new Operations($this->db, $this->content, $this->publication, $this->routes, $this->cache, $this->queue, $config->experimental());
         $this->translator = $translator ?? $this->configuredTranslator();
     }

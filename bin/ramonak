@@ -5,7 +5,7 @@ declare(strict_types=1);
 // The command line of an installation:
 //   migrate                       apply new migrations
 //   site:sync <site>              write a site's row, domains and languages from its site.json
-//   jobs:run [limit]              run due background jobs (cron, every minute)
+//   jobs:run [limit]              removes built pages of changed templates, then runs due background jobs (cron, every minute)
 //   op <site> <operation> [json]  run one operation as the installation's administrator (actor cli)
 //   cache:purge <site>            remove a site's built pages
 //   htaccess                      write public/.htaccess from the configuration
@@ -32,7 +32,9 @@ try {
             $out(['site' => $site->key, 'domains' => $site->domains, 'languages' => array_keys($site->languages)]);
             break;
         case 'jobs:run':
-            $out($kernel->queue->run($kernel->jobHandlers(), (int) ($args[1] ?? 20)));
+            // built pages of a site whose templates changed are removed first, then the due jobs run
+            $templates = $kernel->templates->check();
+            $out(['templates_purged' => $templates] + $kernel->queue->run($kernel->jobHandlers(), (int) ($args[1] ?? 20)));
             break;
         case 'op':
             $site = $kernel->sites->byKey($args[1] ?? '') ?? throw new InvalidArgumentException('op <site> <operation> [json]: no such site');
