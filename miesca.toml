@@ -11,6 +11,7 @@ kola = "usie"
 "dir:docs" = { faza = "dadzienaść", rola = "sens" }
 "file:docs/architecture.md" = { faza = "dadzienaść", rola = "sens" }
 "file:composer.json" = { faza = "dadzienaść", rola = "prajava" }
+"file:samapravierka.ts" = { faza = "ściah", rola = "sens" }
 "file:composer.lock" = { faza = "ściah", rola = "prajava" }
 "file:phpunit.xml" = { faza = "dadzienaść", rola = "prajava" }
 "dir:bin" = { faza = "ściah", rola = "sens" }
