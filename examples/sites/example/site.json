@@ -80,6 +80,10 @@
         "updated": {
           "type": "date",
           "translate": false
+        },
+        "source_url": {
+          "type": "text",
+          "translate": false
         }
       },
       "schema": "NewsArticle"

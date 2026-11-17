@@ -20,6 +20,7 @@ use Ramonak\Jobs\Translator;
 use Ramonak\Media\AvifCodec;
 use Ramonak\Media\Codec;
 use Ramonak\Media\Images;
+use Ramonak\Media\Videos;
 use Ramonak\Operation\Operations;
 use Ramonak\Render\PageCache;
 use Ramonak\Render\Renderer;
@@ -43,6 +44,10 @@ final class Kernel
     public readonly Operations $operations;
     /** the images of the media library as pages get them; null without a media directory */
     public readonly ?Images $images;
+    /** videos of YouTube in pages: a cover and a link until the visitor presses play */
+    public readonly Videos $videos;
+    /** @var (\Closure(string):?string)|null a stand-in for fetching a URL (covers of videos), for tests */
+    public ?\Closure $fetch = null;
     private ?Renderer $renderer = null;
     private ?Translator $translator;
     /** @var (callable(array):string)|null a stand-in for the IndexNow job, for tests */
@@ -67,6 +72,7 @@ final class Kernel
         $quality = (int) $config->get('media_quality', 55);
         $this->images = $mediaDir !== '' && $codec !== null ? new Images($this->db, $mediaDir, $codec, $quality) : null;
         $this->operations = new Operations($this->db, $this->content, $this->publication, $this->routes, $this->cache, $this->queue, $config->experimental(), $mediaDir, $codec, $quality);
+        $this->videos = new Videos($this->db, $this->queue, fn (string $url): ?string => ($this->fetch ?? self::fetch(...))($url));
         $this->translator = $translator ?? $this->configuredTranslator();
     }
 
@@ -94,6 +100,13 @@ final class Kernel
                 return 'published as publication ' . $done['publication'];
             },
             'form.notify' => new Notify($this->db, $this->sites, \Closure::fromCallable([$this, 'mailerFor'])),
+            'video.cover' => fn (array $job): string => $this->videos->cover($job, function (int $siteId, string $bytes, string $alt): string {
+                $site = $this->sites->byId($siteId);
+                $added = $this->operations->run($site, new Operation\Actor('job', 'administratar'), 'media.add',
+                    ['data_base64' => base64_encode($bytes)] + ($alt !== '' ? ['alt' => array_fill_keys(array_keys($site->languages), $alt)] : []));
+                $this->cache->purgeSite($siteId); // the pages that show the video get its cover
+                return (string) $added['path'];
+            }),
             'indexnow' => $this->indexNow ?? new IndexNow($this->sites, (array) $this->config->get('indexnow', []), $this->config->experimental()),
         ];
     }
@@ -111,10 +124,18 @@ final class Kernel
         return isset($c['from']) ? Mailer::fromConfig($c) : null;
     }
 
+    /** The body of a URL fetched by the server, or null: covers and titles of videos. */
+    private static function fetch(string $url): ?string
+    {
+        $context = stream_context_create(['http' => ['timeout' => 15, 'user_agent' => 'Ramonak', 'ignore_errors' => false]]);
+        $body = @file_get_contents($url, false, $context);
+        return $body === false ? null : $body;
+    }
+
     private function renderer(): Renderer
     {
         return $this->renderer ??= new Renderer($this->db, $this->publication, $this->routes, (string) $this->config->require('var_dir'),
-            $this->config->experimental(), (bool) $this->config->get('template_auto_reload', false), null, $this->images);
+            $this->config->experimental(), (bool) $this->config->get('template_auto_reload', false), null, $this->images, $this->videos);
     }
 
     public function handle(Request $request): Response

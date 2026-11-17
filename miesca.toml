@@ -81,3 +81,6 @@ kola = "usie"
 "file:src/Media/AvifCodec.php" = { faza = "ściah", rola = "prajava" }
 "file:src/Media/Images.php" = { faza = "ściah", rola = "prajava" }
 "file:tests/MediaTest.php" = { faza = "ściah", rola = "prajava" }
+"file:migrations/003-video.sql" = { faza = "ściah", rola = "prajava" }
+"file:src/Media/Videos.php" = { faza = "ściah", rola = "prajava" }
+"file:tests/VideoTest.php" = { faza = "ściah", rola = "prajava" }

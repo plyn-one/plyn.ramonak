@@ -32,6 +32,7 @@ final class Renderer
         private bool $autoReload = false,
         private ?Indexing $indexing = null,
         private ?\Ramonak\Media\Images $images = null,
+        private ?\Ramonak\Media\Videos $videos = null,
     ) {
         $this->indexing ??= new Indexing($db);
     }
@@ -63,6 +64,9 @@ final class Renderer
             $context['seo']['canonical'] = $site->url($path) . '?page=' . (int) $number;
         }
         $html = $this->env($site)->render((string) ($kind['template'] ?? $route['kind'] . '.twig'), $context);
+        if ($this->videos !== null) {
+            $html = $this->videos->rewrite($html, $site->id, $lang);
+        }
         if ($this->images !== null) {
             $html = $this->images->rewrite($html, $site->id, $lang);
         }
@@ -167,6 +171,10 @@ final class Renderer
             }
             if (!empty($fields['image'])) {
                 $node['image'] = $site->url('/' . ltrim((string) $fields['image'], '/'));
+            }
+            if (!empty($fields['source_url'])) {
+                // what the text was made from: the original article, the recording of an interview
+                $node['isBasedOn'] = (string) $fields['source_url'];
             }
             if (is_array($organization)) {
                 $node['publisher'] = ['@type' => $organization['@type'] ?? 'Organization', 'name' => $organization['name'] ?? $site->name($lang)];
