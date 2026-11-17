@@ -57,7 +57,7 @@ final class Kernel
         $this->cache = new PageCache($this->db, (string) $config->require('cache_dir'));
         $this->queue = new Queue($this->db);
         $this->templates = new TemplateWatch($this->db, $this->sites, $this->cache, $var, dirname(__DIR__) . '/templates');
-        $this->operations = new Operations($this->db, $this->content, $this->publication, $this->routes, $this->cache, $this->queue, $config->experimental());
+        $this->operations = new Operations($this->db, $this->content, $this->publication, $this->routes, $this->cache, $this->queue, $config->experimental(), (string) $config->get('media_dir', ''));
         $this->translator = $translator ?? $this->configuredTranslator();
     }
 

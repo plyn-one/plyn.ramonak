@@ -42,6 +42,8 @@ final class Operations
         'event.list' => ['davierany', 'eventList', false],
         'form.list' => ['davierany', 'formList', false],
         'form.delete' => ['davierany', 'formDelete', true],
+        'content.import' => ['davierany', 'contentImport', true],
+        'media.add' => ['davierany', 'mediaAdd', true],
         'seo.audit' => ['supracoŭnik', 'seoAudit', false],
     ];
 
@@ -53,6 +55,7 @@ final class Operations
         private PageCache $cache,
         private Queue $queue,
         private bool $experimental,
+        private string $mediaDir = '',
     ) {}
 
     /** @return array<string,mixed> */
@@ -390,8 +393,9 @@ final class Operations
         if ($state !== 'queued') {
             throw new OperationError('job_not_queued', "Job {$id} is {$state}; only a queued job can be cancelled");
         }
-        $this->db->exec("UPDATE job SET state = 'cancelled', result = 'cancelled by an administrator', locked_until = NULL WHERE id = ? AND state = 'queued'", [$id]);
-        return ['id' => $id, 'state' => 'cancelled'];
+        // the jobs table has no 'cancelled' state: a cancelled job is failed, with the reason written as its result
+        $this->db->exec("UPDATE job SET state = 'failed', result = 'cancelled by an administrator', locked_until = NULL WHERE id = ? AND state = 'queued'", [$id]);
+        return ['id' => $id, 'state' => 'failed', 'result' => 'cancelled by an administrator'];
     }
 
     private function jobList(Site $site, Actor $actor, array $input): array
@@ -509,6 +513,118 @@ final class Operations
         }
         return ['pages' => count($pages), 'note' => 'orphans count links in the texts of pages; menus and lists of the templates also link',
             'issues' => array_filter($issues, fn ($v) => $v !== [])];
+    }
+
+    /**
+     * Writes many items of a site at once, all or nothing. Each item: {item, kind, lang, fields, path?, origin?, parent?,
+     * position?, publish?}. A new item is created with its kind and path; an existing one keeps its kind. Fields that did not
+     * change leave the version as it is; a publish of the version already published is skipped.
+     */
+    private function contentImport(Site $site, Actor $actor, array $input): array
+    {
+        $items = self::need($input, 'items');
+        if (!is_array($items) || !array_is_list($items) || count($items) > 500) {
+            throw new OperationError('input_invalid', 'items is a list of at most 500 items');
+        }
+        $counts = ['created' => 0, 'saved' => 0, 'unchanged' => 0, 'published' => 0];
+        foreach ($items as $n => $spec) {
+            if (!is_array($spec) || !isset($spec['item'], $spec['kind'], $spec['lang']) || !is_array($spec['fields'] ?? null)) {
+                throw new OperationError('input_invalid', "items[{$n}] needs item, kind, lang and fields (an object)");
+            }
+            $key = (string) $spec['item'];
+            $lang = (string) $spec['lang'];
+            $kind = (string) $spec['kind'];
+            try {
+                $item = $this->content->item($site, $key);
+            } catch (OperationError $e) {
+                if ($e->error !== 'item_unknown') {
+                    throw $e;
+                }
+                $this->content->create($site, $kind, $key, isset($spec['parent']) ? (string) $spec['parent'] : null, (int) ($spec['position'] ?? 0));
+                $item = $this->content->item($site, $key);
+                $counts['created']++;
+            }
+            if ($item['kind'] !== $kind) {
+                throw new OperationError('input_invalid', "items[{$n}]: {$key} is a {$item['kind']}, not a {$kind}");
+            }
+            if (isset($spec['path']) && $this->routes->pathOf((int) $item['id'], $lang) !== (string) $spec['path']) {
+                $this->routes->set($site, (int) $item['id'], $lang, (string) $spec['path']);
+            }
+            $origin = (string) ($spec['origin'] ?? 'source');
+            $clean = Content::check($site->kind($kind), $spec['fields']);
+            $latest = $this->content->latest((int) $item['id'], $lang);
+            if ($latest !== null && $latest['origin'] === $origin && $latest['fields'] === $clean) {
+                $version = (int) $latest['id'];
+                $counts['unchanged']++;
+            } else {
+                $version = $this->content->save($site, (int) $item['id'], $lang, $spec['fields'], $origin, $actor->label());
+                $counts['saved']++;
+            }
+            if (!empty($spec['publish'])) {
+                $current = $this->publication->current((int) $item['id'], $lang);
+                if ($current === null || (int) $current['version_id'] !== $version) {
+                    $this->publishVersion($site, $actor, $item, $lang, $version);
+                    $counts['published']++;
+                }
+            }
+        }
+        return ['items' => count($items)] + $counts;
+    }
+
+    /**
+     * Stores one file of a site (an image, a PDF): {data_base64, alt?: {lang: text}, caption?: {lang: text}}. The file is kept
+     * once, by its checksum, in the media directory of the installation, which the web server sends as /media/; the same bytes
+     * always get the same path, so adding a file twice changes nothing.
+     */
+    private function mediaAdd(Site $site, Actor $actor, array $input): array
+    {
+        if ($this->mediaDir === '') {
+            throw new OperationError('media_unavailable', 'This installation has no media directory (media_dir in shared/config.php)', 503);
+        }
+        $data = base64_decode((string) self::need($input, 'data_base64'), true);
+        if ($data === false || $data === '') {
+            throw new OperationError('input_invalid', 'data_base64 is the file, in base64');
+        }
+        if (strlen($data) > 20 * 1024 * 1024) {
+            throw new OperationError('input_invalid', 'A file is at most 20 MB');
+        }
+        $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->buffer($data);
+        $ext = match ($mime) {
+            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/avif' => 'avif', 'image/gif' => 'gif',
+            'application/pdf' => 'pdf',
+            default => throw new OperationError('media_type_unsupported', "A file of the type {$mime} is not kept as media"),
+        };
+        $sha = hash('sha256', $data);
+        $path = '/media/' . substr($sha, 0, 2) . '/' . $sha . '.' . $ext;
+        $width = $height = null;
+        if (str_starts_with($mime, 'image/') && ($info = @getimagesizefromstring($data)) !== false) {
+            [$width, $height] = [$info[0], $info[1]];
+        }
+        $file = rtrim($this->mediaDir, '/') . substr($path, strlen('/media'));
+        if (!is_file($file)) {
+            @mkdir(dirname($file), 0755, true);
+            $tmp = $file . '.' . getmypid();
+            if (file_put_contents($tmp, $data) === false || !rename($tmp, $file)) {
+                throw new OperationError('media_write_failed', 'The file could not be written to the media directory', 500);
+            }
+        }
+        $langs = array_unique([...array_keys((array) ($input['alt'] ?? [])), ...array_keys((array) ($input['caption'] ?? []))]);
+        foreach ($langs as $lang) {
+            if (!isset($site->languages[$lang])) {
+                throw new OperationError('language_unknown', "The site {$site->key} has no language {$lang}");
+            }
+        }
+        $id = (int) $this->db->value('SELECT id FROM media WHERE site_id = ? AND path = ?', [$site->id, $path]);
+        if ($id === 0) {
+            $id = $this->db->insert('INSERT INTO media (site_id, path, mime, bytes, sha256, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [$site->id, $path, $mime, strlen($data), $sha, $width, $height, $this->db->now()]);
+        }
+        foreach ($langs as $lang) {
+            $this->db->exec('DELETE FROM media_text WHERE media_id = ? AND lang = ?', [$id, $lang]);
+            $this->db->exec('INSERT INTO media_text (media_id, lang, alt, caption) VALUES (?, ?, ?, ?)',
+                [$id, $lang, (string) ($input['alt'][$lang] ?? ''), isset($input['caption'][$lang]) ? (string) $input['caption'][$lang] : null]);
+        }
+        return ['path' => $path, 'mime' => $mime, 'bytes' => strlen($data), 'width' => $width, 'height' => $height, 'sha256' => $sha];
     }
 
     private function eventList(Site $site, Actor $actor, array $input): array
