@@ -91,6 +91,12 @@ final class VideoTest extends TestCase
         $html = $this->k->handle(new Request('GET', 'example.test', '/news/interview', ''))->body;
         $this->assertMatchesRegularExpression('~<figure class="ramonak-video"><a [^>]*aria-label="Смотреть видео: Андрей Розум - как избежать экстрадиции\?"[^>]*><img src="/media/w1280/[0-9a-f]{2}/[0-9a-f]{64}\.avif" alt="Андрей Розум - как избежать экстрадиции\?" srcset=~', $html,
             'the cover is the site\'s own image, with the full markup of the library');
-        $this->assertStringContainsString('<figcaption>Андрей Розум - как избежать экстрадиции?</figcaption>', $html);
+        $this->assertStringNotContainsString('<figcaption>', $html, 'no caption the author did not give: the title is in the label');
+        $this->op('content.save', ['item' => 'n1', 'lang' => 'ru', 'publish' => true, 'fields' => ['title' => 'Как избежать экстрадиции?', 'date' => '2021-05-14',
+            'body' => '<figure><iframe src="https://www.youtube.com/embed/JSNhVoCNFOg"></iframe><figcaption>Эфир Смартпресс, ведущий — Вячеслав Зенькович</figcaption></figure>']]);
+        $html = $this->k->handle(new Request('GET', 'example.test', '/news/interview', ''))->body;
+        $this->assertStringContainsString('<span class="ramonak-video-play" aria-hidden="true"></span></a><figcaption>Эфир Смартпресс, ведущий — Вячеслав Зенькович</figcaption></figure>', $html,
+            'the caption the author gave stays');
+        $this->assertSame(1, substr_count($html, '<figure'), 'one figure, not one inside another');
     }
 }
