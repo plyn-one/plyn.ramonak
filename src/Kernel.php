@@ -17,6 +17,9 @@ use Ramonak\Jobs\MessagesTranslator;
 use Ramonak\Jobs\Queue;
 use Ramonak\Jobs\Translate;
 use Ramonak\Jobs\Translator;
+use Ramonak\Media\AvifCodec;
+use Ramonak\Media\Codec;
+use Ramonak\Media\Images;
 use Ramonak\Operation\Operations;
 use Ramonak\Render\PageCache;
 use Ramonak\Render\Renderer;
@@ -38,6 +41,8 @@ final class Kernel
     public readonly Queue $queue;
     public readonly TemplateWatch $templates;
     public readonly Operations $operations;
+    /** the images of the media library as pages get them; null without a media directory */
+    public readonly ?Images $images;
     private ?Renderer $renderer = null;
     private ?Translator $translator;
     /** @var (callable(array):string)|null a stand-in for the IndexNow job, for tests */
@@ -45,7 +50,7 @@ final class Kernel
     /** @var Mailer|null a stand-in for the configured mail, for tests */
     public ?Mailer $mailer = null;
 
-    public function __construct(public readonly Config $config, ?Translator $translator = null)
+    public function __construct(public readonly Config $config, ?Translator $translator = null, ?Codec $codec = null)
     {
         $db = $config->require('database');
         $this->db = new Db((string) $db['dsn'], $db['user'] ?? null, $db['password'] ?? null);
@@ -57,7 +62,11 @@ final class Kernel
         $this->cache = new PageCache($this->db, (string) $config->require('cache_dir'));
         $this->queue = new Queue($this->db);
         $this->templates = new TemplateWatch($this->db, $this->sites, $this->cache, $var, dirname(__DIR__) . '/templates');
-        $this->operations = new Operations($this->db, $this->content, $this->publication, $this->routes, $this->cache, $this->queue, $config->experimental(), (string) $config->get('media_dir', ''));
+        $mediaDir = (string) $config->get('media_dir', '');
+        $codec ??= AvifCodec::usable() ? new AvifCodec() : null;
+        $quality = (int) $config->get('media_quality', 55);
+        $this->images = $mediaDir !== '' && $codec !== null ? new Images($this->db, $mediaDir, $codec, $quality) : null;
+        $this->operations = new Operations($this->db, $this->content, $this->publication, $this->routes, $this->cache, $this->queue, $config->experimental(), $mediaDir, $codec, $quality);
         $this->translator = $translator ?? $this->configuredTranslator();
     }
 
@@ -105,7 +114,7 @@ final class Kernel
     private function renderer(): Renderer
     {
         return $this->renderer ??= new Renderer($this->db, $this->publication, $this->routes, (string) $this->config->require('var_dir'),
-            $this->config->experimental(), (bool) $this->config->get('template_auto_reload', false));
+            $this->config->experimental(), (bool) $this->config->get('template_auto_reload', false), null, $this->images);
     }
 
     public function handle(Request $request): Response
@@ -134,6 +143,10 @@ final class Kernel
         }
         if (($site->domains[$request->host] ?? '') === 'alias') {
             return Response::redirect($site->url($request->path) . ($request->query !== '' ? '?' . $request->query : ''));
+        }
+        if ($this->images !== null && str_starts_with($request->path, '/media/w')) {
+            // a smaller copy of a library image, made on its first request; the web server sends it by itself from then on
+            return $this->images->serve($request->path) ?? Response::text('No such image', 404);
         }
         if ($request->path === '/_ramonak/api') {
             return (new Bridge($this->db, $this->operations, (array) $this->config->get('bridge', [])))->handle($request, $site);

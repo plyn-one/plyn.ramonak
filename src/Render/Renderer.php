@@ -31,6 +31,7 @@ final class Renderer
         private bool $experimental,
         private bool $autoReload = false,
         private ?Indexing $indexing = null,
+        private ?\Ramonak\Media\Images $images = null,
     ) {
         $this->indexing ??= new Indexing($db);
     }
@@ -62,6 +63,9 @@ final class Renderer
             $context['seo']['canonical'] = $site->url($path) . '?page=' . (int) $number;
         }
         $html = $this->env($site)->render((string) ($kind['template'] ?? $route['kind'] . '.twig'), $context);
+        if ($this->images !== null) {
+            $html = $this->images->rewrite($html, $site->id, $lang);
+        }
         return ['html' => $html, 'deps' => array_keys($this->deps)];
     }
 
@@ -320,6 +324,12 @@ final class Renderer
         $twig->addFunction(new TwigFunction('items', function (array $context, string $kind, array $options = []) use ($site): array {
             return $this->items($site, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $kind, $options);
         }, ['needs_context' => true]));
+        // image('/media/ab/<sha>.avif', {sizes: '20rem', class: '...'}): the full img of a library image, as rewrite() makes it
+        $twig->addFunction(new TwigFunction('image', function (array $context, string $src, array $attrs = []) use ($site): string {
+            $attrs = array_map('strval', $attrs);
+            return $this->images?->tag($site->id, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $src, $attrs)
+                ?? '<img src="' . htmlspecialchars($src, ENT_QUOTES) . '" alt="' . htmlspecialchars($attrs['alt'] ?? '', ENT_QUOTES) . '">';
+        }, ['needs_context' => true, 'is_safe' => ['html']]));
         $twig->addFunction(new TwigFunction('count_items', function (array $context, string $kind) use ($site): int {
             return $this->count($site, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $kind);
         }, ['needs_context' => true]));

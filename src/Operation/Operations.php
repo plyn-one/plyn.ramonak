@@ -56,6 +56,8 @@ final class Operations
         private Queue $queue,
         private bool $experimental,
         private string $mediaDir = '',
+        private ?\Ramonak\Media\Codec $codec = null,
+        private int $mediaQuality = 55,
     ) {}
 
     /** @return array<string,mixed> */
@@ -589,17 +591,24 @@ final class Operations
             throw new OperationError('input_invalid', 'A file is at most 20 MB');
         }
         $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->buffer($data);
-        $ext = match ($mime) {
-            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/avif' => 'avif', 'image/gif' => 'gif',
-            'application/pdf' => 'pdf',
-            default => throw new OperationError('media_type_unsupported', "A file of the type {$mime} is not kept as media"),
-        };
+        // an image is kept once, as AVIF: upright, without metadata, no larger than the site needs (site.json media.max_side,
+        // 2000 px by default); its original is not kept. Its name is the checksum of what was sent, so the same file sent
+        // twice is one image. A PDF is kept as it is.
         $sha = hash('sha256', $data);
-        $path = '/media/' . substr($sha, 0, 2) . '/' . $sha . '.' . $ext;
         $width = $height = null;
-        if (str_starts_with($mime, 'image/') && ($info = @getimagesizefromstring($data)) !== false) {
-            [$width, $height] = [$info[0], $info[1]];
+        if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif', 'image/heic', 'image/heif'], true)) {
+            if ($this->codec === null) {
+                throw new OperationError('media_avif_unavailable', 'This installation cannot write AVIF, and images are kept only as AVIF', 503);
+            }
+            $side = (int) ($site->declaration['media']['max_side'] ?? 2000);
+            [$data, $width, $height] = $this->codec->avif($data, $side, $side, (int) ($site->declaration['media']['quality'] ?? $this->mediaQuality));
+            [$mime, $ext] = ['image/avif', 'avif'];
+        } elseif ($mime === 'application/pdf') {
+            $ext = 'pdf';
+        } else {
+            throw new OperationError('media_type_unsupported', "A file of the type {$mime} is not kept as media");
         }
+        $path = '/media/' . substr($sha, 0, 2) . '/' . $sha . '.' . $ext;
         $file = rtrim($this->mediaDir, '/') . substr($path, strlen('/media'));
         if (!is_file($file)) {
             @mkdir(dirname($file), 0755, true);
@@ -617,14 +626,14 @@ final class Operations
         $id = (int) $this->db->value('SELECT id FROM media WHERE site_id = ? AND path = ?', [$site->id, $path]);
         if ($id === 0) {
             $id = $this->db->insert('INSERT INTO media (site_id, path, mime, bytes, sha256, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [$site->id, $path, $mime, strlen($data), $sha, $width, $height, $this->db->now()]);
+                [$site->id, $path, $mime, strlen($data), hash('sha256', $data), $width, $height, $this->db->now()]);
         }
         foreach ($langs as $lang) {
             $this->db->exec('DELETE FROM media_text WHERE media_id = ? AND lang = ?', [$id, $lang]);
             $this->db->exec('INSERT INTO media_text (media_id, lang, alt, caption) VALUES (?, ?, ?, ?)',
                 [$id, $lang, (string) ($input['alt'][$lang] ?? ''), isset($input['caption'][$lang]) ? (string) $input['caption'][$lang] : null]);
         }
-        return ['path' => $path, 'mime' => $mime, 'bytes' => strlen($data), 'width' => $width, 'height' => $height, 'sha256' => $sha];
+        return ['path' => $path, 'mime' => $mime, 'bytes' => strlen($data), 'width' => $width, 'height' => $height, 'sha256' => hash('sha256', $data)];
     }
 
     private function eventList(Site $site, Actor $actor, array $input): array

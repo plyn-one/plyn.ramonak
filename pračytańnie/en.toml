@@ -78,3 +78,8 @@
 "file:src/Forms/SendmailMailer.php" = "a letter through the host's sendmail"
 "file:src/Forms/SmtpMailer.php" = "a letter through a mail server over SSL or STARTTLS"
 "file:tests/FormsTest.php" = "forms end to end: an entry kept and mailed, refusals, the trap for robots, the limit per address, retries, the levels of form.list and form.delete"
+"dir:src/Media" = "the images of the media library: one AVIF per image, smaller copies on request, the markup of images in pages"
+"file:src/Media/Codec.php" = "what turns an image of any common format into the AVIF a site keeps"
+"file:src/Media/AvifCodec.php" = "Imagick reads (JPEG, PNG, WebP, AVIF, GIF, HEIC), turns the image upright, strips its metadata and scales it; GD writes AVIF"
+"file:src/Media/Images.php" = "smaller copies from a fixed ladder of widths made on first request into a cache that cleans itself; an img of the library in a page gets srcset, sizes, width, height, lazy loading and its alt; image() for templates"
+"file:tests/MediaTest.php" = "the media library end to end with a codec that writes PNG: one file per image, copies on request, the markup of images, the cleaning of the cache"

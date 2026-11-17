@@ -5,8 +5,10 @@ declare(strict_types=1);
 // The command line of an installation:
 //   migrate                       apply new migrations
 //   site:sync <site>              write a site's row, domains and languages from its site.json
-//   jobs:run [limit]              removes built pages of changed templates, then runs due background jobs (cron, every minute)
-//   op <site> <operation> [json]  run one operation as the installation's administrator (actor cli)
+//   jobs:run [limit]              removes built pages of changed templates, runs due background jobs (cron, every minute) and,
+//                                 once an hour, keeps the cache of smaller image copies within media_cache_files and media_cache_mb
+//   op <site> <operation> [json|-] run one operation as the installation's administrator (actor cli); - reads the json from stdin
+//   media:add <site> <file>...    each file into the media library (an image as AVIF), with alt from --alt='{"ru": "..."}'
 //   cache:purge <site>            remove a site's built pages
 //   htaccess                      write public/.htaccess from the configuration
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -34,12 +36,33 @@ try {
         case 'jobs:run':
             // built pages of a site whose templates changed are removed first, then the due jobs run
             $templates = $kernel->templates->check();
-            $out(['templates_purged' => $templates] + $kernel->queue->run($kernel->jobHandlers(), (int) ($args[1] ?? 20)));
+            $result = ['templates_purged' => $templates] + $kernel->queue->run($kernel->jobHandlers(), (int) ($args[1] ?? 20));
+            $mark = $config->require('var_dir') . '/media-cleaned';
+            if ($kernel->images !== null && (!is_file($mark) || filemtime($mark) < time() - 3600)) {
+                touch($mark);
+                $result['media_cache'] = $kernel->images->clean((int) $config->get('media_cache_files', 60000), (int) $config->get('media_cache_mb', 2000) * 1024 * 1024);
+            }
+            $out($result);
             break;
         case 'op':
             $site = $kernel->sites->byKey($args[1] ?? '') ?? throw new InvalidArgumentException('op <site> <operation> [json]: no such site');
-            $input = json_decode($args[3] ?? '{}', true, 512, JSON_THROW_ON_ERROR);
+            $input = json_decode(($args[3] ?? '{}') === '-' ? (string) stream_get_contents(STDIN) : ($args[3] ?? '{}'), true, 512, JSON_THROW_ON_ERROR);
             $out($kernel->operations->run($site, new Actor('cli', 'administratar'), $args[2] ?? '', $input));
+            break;
+        case 'media:add':
+            $site = $kernel->sites->byKey($args[1] ?? '') ?? throw new InvalidArgumentException('media:add <site> <file>... [--alt=json]');
+            $alt = null;
+            $files = [];
+            foreach (array_slice($args, 2) as $a) {
+                str_starts_with($a, '--alt=') ? $alt = json_decode(substr($a, 6), true, 512, JSON_THROW_ON_ERROR) : $files[] = $a;
+            }
+            $added = [];
+            foreach ($files as $f) {
+                $data = is_file($f) ? file_get_contents($f) : throw new InvalidArgumentException("media:add: no file {$f}");
+                $added[basename($f)] = $kernel->operations->run($site, new Actor('cli', 'administratar'), 'media.add',
+                    ['data_base64' => base64_encode((string) $data)] + ($alt ? ['alt' => $alt] : []));
+            }
+            $out($added);
             break;
         case 'cache:purge':
             $site = $kernel->sites->byKey($args[1] ?? '') ?? throw new InvalidArgumentException('cache:purge <site>');
@@ -51,7 +74,7 @@ try {
             $out(['written' => $file, 'experimental' => $config->experimental()]);
             break;
         default:
-            fwrite(STDERR, "ramonak: migrate | site:sync <site> | jobs:run [limit] | op <site> <operation> [json] | cache:purge <site> | htaccess\n");
+            fwrite(STDERR, "ramonak: migrate | site:sync <site> | jobs:run [limit] | op <site> <operation> [json|-] | media:add <site> <file>... | cache:purge <site> | htaccess\n");
             exit(2);
     }
 } catch (Ramonak\OperationError $e) {

@@ -76,3 +76,8 @@ kola = "usie"
 "file:src/Forms/SendmailMailer.php" = { faza = "ściah", rola = "prajava" }
 "file:src/Forms/SmtpMailer.php" = { faza = "ściah", rola = "prajava" }
 "file:tests/FormsTest.php" = { faza = "ściah", rola = "prajava" }
+"dir:src/Media" = { faza = "ściah", rola = "prajava" }
+"file:src/Media/Codec.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Media/AvifCodec.php" = { faza = "ściah", rola = "prajava" }
+"file:src/Media/Images.php" = { faza = "ściah", rola = "prajava" }
+"file:tests/MediaTest.php" = { faza = "ściah", rola = "prajava" }
