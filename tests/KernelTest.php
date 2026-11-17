@@ -324,6 +324,16 @@ final class KernelTest extends TestCase
         $this->page('a', 'page', '/a', ['title' => 'Убежище', 'description' => 'x', 'body' => '<a href="/b">b</a> <a href="/gone">g</a> <a href="https://example.test/old">o</a>']);
         $this->page('b', 'page', '/b', ['title' => 'убежище', 'body' => str_repeat('x', 10)]);
         $this->op('redirect.set', ['path' => '/old', 'target' => '/b']);
+        $this->op('redirect.set', ['path' => '/never', 'target' => '/b']);
+        $this->assertSame(301, $this->get('/never')->status);
+        $this->op('redirect.delete', ['path' => '/never']);
+        $this->assertSame(404, $this->get('/never')->status, 'a deleted redirect answers as if it had never been');
+        try {
+            $this->op('redirect.delete', ['path' => '/b']);
+            $this->fail('a path that leads to an item is not a redirect');
+        } catch (\Ramonak\OperationError $e) {
+            $this->assertSame('not_a_redirect', $e->error);
+        }
         $issues = $this->op('seo.audit', [])['issues'];
         $this->assertSame([['from' => '/a', 'to' => '/gone']], $issues['broken_links']);
         $this->assertSame([['from' => '/a', 'to' => '/old']], $issues['links_through_redirect']);

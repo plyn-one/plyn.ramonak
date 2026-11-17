@@ -35,6 +35,7 @@ final class Operations
         'route.list' => ['supracoŭnik', 'routeList', false],
         'redirect.set' => ['davierany', 'redirectSet', true],
         'redirect.import' => ['davierany', 'redirectImport', true],
+        'redirect.delete' => ['davierany', 'redirectDelete', true],
         'translation.request' => ['davierany', 'translationRequest', true],
         'cache.purge' => ['davierany', 'cachePurge', true],
         'job.list' => ['davierany', 'jobList', false],
@@ -343,6 +344,15 @@ final class Operations
         $this->routes->redirect($site, $path, isset($input['target']) ? (string) $input['target'] : null, (int) ($input['status'] ?? 301));
         $this->cache->purgePath($site->primaryDomain(), $path);
         return ['path' => $path, 'status' => (int) ($input['status'] ?? 301)];
+    }
+
+    /** A redirect that should not be: the path then answers as unknown (404), as if it had never been. */
+    private function redirectDelete(Site $site, Actor $actor, array $input): array
+    {
+        $path = Routes::normalize((string) self::need($input, 'path'));
+        $this->routes->unredirect($site, $path);
+        $this->cache->purgePath($site->primaryDomain(), $path);
+        return ['path' => $path, 'deleted' => true];
     }
 
     private function redirectImport(Site $site, Actor $actor, array $input): array

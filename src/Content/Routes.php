@@ -75,6 +75,16 @@ final class Routes
         });
     }
 
+    /** Removes a redirect; a path that leads to an item is not a redirect and stays. */
+    public function unredirect(Site $site, string $path): void
+    {
+        $existing = $this->resolve($site, self::normalize($path));
+        if ($existing === null || $existing['item_id'] !== null) {
+            throw new OperationError('not_a_redirect', "{$path} is not a redirect of the site", 404);
+        }
+        $this->db->exec('DELETE FROM route WHERE id = ?', [$existing['id']]);
+    }
+
     public function redirect(Site $site, string $path, ?string $target, int $status = 301, ?string $lang = null): void
     {
         $path = self::normalize($path);
