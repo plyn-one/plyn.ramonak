@@ -125,6 +125,9 @@ final class KernelTest extends TestCase
         $this->assertSame(2, $import['imported']);
         $this->assertSame('path_taken', $import['refused'][0]['error'], 'a redirect never hides a page');
         $this->assertSame(410, $this->get('/old-page')->status);
+        $old = $this->get('/services/services/asylum/');
+        $this->assertSame([301, 'https://example.test/uslugi/asylum'], [$old->status, $old->headers['Location']],
+            'an old address with a slash at its end is redirected in one hop, as search engines need');
         $this->assertSame(404, $this->get('/nothing-here')->status);
         $this->assertSame(405, $this->get('/uslugi/asylum', method: 'DELETE')->status);
     }

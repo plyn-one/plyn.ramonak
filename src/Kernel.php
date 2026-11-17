@@ -174,14 +174,15 @@ final class Kernel
         if ($route === null) {
             return $this->notFound($site, $site->language($path));
         }
+        $status = (int) $route['status'];
+        if ($status === 301 || $status === 302) {
+            // a redirect is followed at once, also from another form of its address (/old/ as /old): one hop, not two
+            $target = (string) $route['target'];
+            return Response::redirect(str_starts_with($target, '/') ? $site->url($target) : $target, $status);
+        }
         if ($path !== $request->path) {
             // one form of every address: /a/ and /a//b lead to /a and /a/b
             return Response::redirect($site->url($path) . ($request->query !== '' ? '?' . $request->query : ''));
-        }
-        $status = (int) $route['status'];
-        if ($status === 301 || $status === 302) {
-            $target = (string) $route['target'];
-            return Response::redirect(str_starts_with($target, '/') ? $site->url($target) : $target, $status);
         }
         if ($status === 410) {
             $notFound = $this->notFound($site, (string) $route['lang']);

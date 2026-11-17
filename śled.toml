@@ -100,3 +100,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "The owner of Legal Status decided how images work, for every site of Ramonak and for tens of thousands of them. One file per image: media.add takes JPEG, PNG, WebP, AVIF, HEIC or GIF, turns it upright, strips every metadata (EXIF, GPS), converts to sRGB, scales it down to the largest size the site needs (site.json media.max_width, by default 2000 px on the long side) and keeps it as AVIF; the original is not kept and the upload leaves no temporary file. Smaller widths, from a short fixed ladder, are made on first request into a cache bounded in megabytes and files that cleans itself of what was not asked for long; removing the cache loses nothing. No WebP or JPEG copies: AVIF only. Agents write no image markup: a template calls image() with the space the image takes and an optional ratio, and an img of /media/... in a body becomes the same img with srcset, sizes, width, height, lazy loading and its alt in the page's language from the library. For thousands of images: search of the library, alt and caption per language, where each image is used, no deleting of one in use, seo.audit of missing alt and heavy images. Storage sits behind one interface: the hosting's disk now, Cloudflare R2 when the disk or its 300000 files run short, with content and templates unchanged. Images go straight to the library, never into a repository. Prastora keeps only the markup of ratio and cover. Built once the news import that uses media.add is done."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "An old address with a slash at its end (/services/, /news/group/) was redirected in two hops: first to its form without the slash, then by its redirect. A redirect is now followed at once from any form of its address, one hop as search engines need. Found on michalevic.org after its old service addresses were imported."
