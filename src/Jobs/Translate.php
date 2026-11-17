@@ -52,7 +52,7 @@ final class Translate
                 $types[$name] = $type;
             }
         }
-        $translated = $this->translator->translate($translatable, $types, (string) $source['lang'], $to, $site->declaration['glossary'][$to] ?? []);
+        $translated = $this->translator->translate($translatable, $types, (string) $source['lang'], $to, $site->declaration['glossary'][(string) $source['lang']][$to] ?? []);
         $version = $this->content->save($site, (int) $item['id'], $to, array_merge($fields, $translated), 'machine', 'ramonak/translate', (int) $source['id']);
         if ($this->routes->pathOf((int) $item['id'], $to) === null) {
             $sourcePath = $this->routes->pathOf((int) $item['id'], (string) $source['lang']);

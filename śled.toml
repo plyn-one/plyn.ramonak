@@ -136,3 +136,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "The caption of a video is the one its author gives: a figure written around the player keeps its figcaption; a player alone gets none, its title being in the label of its link. By the owner: the title of a recording repeated under it says nothing, the caption is for what the page lacks (the outlet and the host of an interview). 34 tests, 200 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "The glossary of a site is kept by direction, glossary.<from>.<to> in its declaration, and the translation job gives the translator the glossary of its own direction: one site has sources in several languages (michalevic: news in Russian, pages in English), so a glossary per target language alone mixed directions. By the owner of Legal Status, 17 November 2026; for Legal Status the glossary is generated from Legal-Status-UAB/translation (tools/term.py glossary)."

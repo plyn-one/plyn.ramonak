@@ -176,8 +176,9 @@ When a source version is published, a `translation` job is queued for each langu
 on, unless that language has an edited version that follows a newer source. A machine version is public to visitors at once but closed to search engines (noindex, out of hreflang and the
 sitemap) until as many distinct reviewers as the site asks (`machine_reviews`, 1 by default; 0 opens it at once) have
 reviewed it as `ok_for_now` and none as `needs_work`. The job asks the model route of the frame's
-Klučnik (its limit and accounting apply), writes a `machine` version and publishes it. The site's glossary of terms comes
-from its configuration; for Legal Status, from `Legal-Status-UAB/translation`.
+Klučnik (its limit and accounting apply), writes a `machine` version and publishes it. The site's glossary of terms is kept in
+its declaration by direction, `glossary.<from>.<to>`, a list of source and target pairs, since one site has sources in
+several languages; for Legal Status it is generated from `Legal-Status-UAB/translation` (tools/term.py glossary).
 
 ## 9. Queue
 

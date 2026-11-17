@@ -23,6 +23,7 @@ final class KernelTest extends TestCase
     private Actor $agent;
     /** @var list<array{string,string}> */
     private array $translated = [];
+    private array $glossaries = [];
 
     protected function setUp(): void
     {
@@ -46,7 +47,7 @@ final class KernelTest extends TestCase
             public function __construct(private KernelTest $test) {}
             public function translate(array $fields, array $types, string $from, string $to, array $glossary = []): array
             {
-                $this->test->noteTranslation($from, $to);
+                $this->test->noteTranslation($from, $to, $glossary);
                 return array_map(fn ($v) => "[{$to}] " . $v, $fields);
             }
         };
@@ -55,9 +56,10 @@ final class KernelTest extends TestCase
             'template_auto_reload' => true, 'bridge' => ['example' => str_repeat('k', 40)]]), $translator);
     }
 
-    public function noteTranslation(string $from, string $to): void
+    public function noteTranslation(string $from, string $to, array $glossary = []): void
     {
         $this->translated[] = [$from, $to];
+        $this->glossaries["{$from}>{$to}"] = array_column($glossary, 'target', 'source');
     }
 
     private function op(string $name, array $input, ?Actor $actor = null): array
@@ -180,6 +182,8 @@ final class KernelTest extends TestCase
         $en = $this->get('/en/services/asylum');
         $this->assertSame(200, $en->status);
         $this->assertStringContainsString('[en] Убежище', $en->body);
+        $this->assertSame(['экстрадиция' => 'extradition'], $this->glossaries['ru>en'], 'the glossary of the direction goes to the translator');
+        $this->assertSame([], $this->glossaries['ru>be'], 'a direction without a glossary gets none');
         $this->assertStringContainsString('<meta name="robots" content="noindex, nofollow">', $en->body, 'a machine translation is closed until reviewed');
         $this->assertStringNotContainsString('hreflang', $en->body);
         $this->assertStringNotContainsString('/en/services/asylum', $this->get('/sitemap.xml')->body);
@@ -216,6 +220,7 @@ final class KernelTest extends TestCase
         $this->k->queue->run($this->k->jobHandlers());
         $this->assertStringContainsString('[ru] Interview', $this->get('/interview')->body, 'the Russian path is the source path without its prefix');
         $this->assertStringContainsString('[be] Interview', $this->get('/be/interview')->body);
+        $this->assertSame([], $this->glossaries['en>ru'], 'the glossary of ru to en is not used from en');
         $ru = $this->op('content.save', ['item' => 'interview', 'lang' => 'ru', 'fields' => ['title' => 'Интервью']]);
         $this->assertSame('edited', $ru['origin'], 'a text in another language is a translation');
     }

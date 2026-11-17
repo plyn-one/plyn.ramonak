@@ -33,7 +33,7 @@
 "dir:src/Operation" = "the operations of a site with the levels they need, and the actor who asks"
 "dir:src/Render" = "rendering with the SEO head, built pages and the sitemap"
 "file:bin/ramonak" = "the command line of an installation: migrate, site:sync, jobs:run, op, cache:purge, htaccess"
-"file:examples/sites/example/site.json" = "the declaration of the example site: domains, languages, kinds with their fields and templates, glossary, a contact form"
+"file:examples/sites/example/site.json" = "the declaration of the example site: domains, languages, kinds with their fields and templates, glossary by direction (from, then to), a contact form"
 "file:examples/sites/example/templates/404.twig" = "the not-found page of the example site"
 "file:examples/sites/example/templates/home.twig" = "the home page of the example site, with a list of news through items()"
 "file:examples/sites/example/templates/layout.twig" = "the layout of the example site: the SEO head of the engine, the language links, one main region"
