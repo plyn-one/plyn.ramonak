@@ -192,11 +192,18 @@ final class Kernel
         if ($this->publication->current((int) $route['item_id'], (string) $route['lang']) === null) {
             return $this->notFound($site, (string) $route['lang']);
         }
-        $page = $this->renderer()->page($site, $route);
+        $page = $this->renderer()->page($site, $route, self::requestQuery($request->query));
         if ($request->method === 'GET' && $request->query === '' && $request->host === $site->primaryDomain() && ($site->declaration['build'] ?? true)) {
             $this->cache->store($site->id, $request->host, $path, $page['html'], $page['deps']);
         }
         return Response::html($page['html']);
+    }
+
+    /** The query string of a page: its values as text, for the template (request.query.<name>). */
+    private static function requestQuery(string $query): array
+    {
+        parse_str($query, $values);
+        return array_filter($values, fn ($v) => is_string($v) && mb_strlen($v) <= 200);
     }
 
     private function notFound(Site $site, string $lang): Response

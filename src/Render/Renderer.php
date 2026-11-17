@@ -36,7 +36,8 @@ final class Renderer
     }
 
     /** @return array{html:string, deps:list<string>} */
-    public function page(Site $site, array $route): array
+    /** @param array<string,string> $query the query string of the request, as the template reads it: request.query */
+    public function page(Site $site, array $route, array $query = []): array
     {
         $this->deps = ['item:' . $route['item_id'] => true];
         $lang = (string) $route['lang'];
@@ -53,6 +54,7 @@ final class Renderer
                 'published_at' => (int) $current['published_at'], 'origin' => $current['origin']],
             'seo' => $this->seo($site, (int) $route['item_id'], (string) $route['kind'], $lang, $path, $fields, (int) $current['published_at']),
             'languages' => $this->languageLinks($site, (int) $route['item_id'], $lang),
+            'request' => ['query' => $query],
         ];
         $html = $this->env($site)->render((string) ($kind['template'] ?? $route['kind'] . '.twig'), $context);
         return ['html' => $html, 'deps' => array_keys($this->deps)];
@@ -224,6 +226,16 @@ final class Renderer
             'fields' => json_decode((string) $r['fields'], true), 'published_at' => (int) $r['published_at']], $rows);
     }
 
+    /** The published items of a kind in a language, for pagers in templates: count_items('news'). */
+    public function count(Site $site, string $lang, string $kind): int
+    {
+        $this->deps['kind:' . $site->id . ':' . $kind] = true;
+        return (int) $this->db->value("SELECT COUNT(*) FROM item i
+            JOIN publication p ON p.item_id = i.id AND p.lang = ? AND p.current = 1
+            JOIN route r ON r.item_id = i.id AND r.lang = p.lang AND r.status = 200
+            WHERE i.site_id = ? AND i.kind = ? AND i.state = 'active'", [$lang, $site->id, $kind]);
+    }
+
     private function env(Site $site): Environment
     {
         if (isset($this->twig[$site->id])) {
@@ -238,6 +250,9 @@ final class Renderer
             'strict_variables' => false, 'autoescape' => 'html']);
         $twig->addFunction(new TwigFunction('items', function (array $context, string $kind, array $options = []) use ($site): array {
             return $this->items($site, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $kind, $options);
+        }, ['needs_context' => true]));
+        $twig->addFunction(new TwigFunction('count_items', function (array $context, string $kind) use ($site): int {
+            return $this->count($site, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $kind);
         }, ['needs_context' => true]));
         $twig->addFunction(new TwigFunction('path', function (array $context, string $itemKey) use ($site): ?string {
             $id = $this->db->value('SELECT id FROM item WHERE site_id = ? AND item_key = ?', [$site->id, $itemKey]);
