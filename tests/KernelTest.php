@@ -157,6 +157,21 @@ final class KernelTest extends TestCase
         $this->assertSame(['n1'], array_column($r->items($this->site, 'ru', 'news', ['order' => 'date', 'limit' => 1]), 'key'));
     }
 
+    public function testAPersonOfTheSiteIsOnePersonOnEveryPage(): void
+    {
+        $ld = fn (string $path) => json_decode(preg_replace('#^.*<script type="application/ld\+json">(.*?)</script>.*$#s', '$1', $this->get($path)->body), true)['@graph'] ?? [];
+        $this->page('about', 'page', '/about', ['title' => 'Обо мне']);
+        $this->page('n1', 'news', '/news/one', ['title' => 'Дело', 'date' => '2021-05-14', 'author' => 'Анна (Ганна) Петрова']);
+        $this->page('n2', 'news', '/news/two', ['title' => 'Другое', 'date' => '2021-05-15', 'author' => 'Иван Иванов']);
+        $about = $ld('/about');
+        $this->assertSame(['Person', 'https://example.test/#anna', 'Анна Петрова', 'https://example.test/about', 'Адвокат', 'https://example.test/assets/anna.webp'],
+            [$about[0]['@type'], $about[0]['@id'], $about[0]['name'], $about[0]['url'], $about[0]['jobTitle'], $about[0]['image']], 'the page about a person gives them in full');
+        $author = $ld('/news/one')[0]['author'];
+        $this->assertSame(['@type' => 'Person', '@id' => 'https://example.test/#anna', 'name' => 'Анна Петрова', 'url' => 'https://example.test/about'], $author,
+            'any form of the name is the same person, by one @id');
+        $this->assertSame(['@type' => 'Person', 'name' => 'Иван Иванов'], $ld('/news/two')[0]['author'], 'an author the site does not describe stays a name');
+    }
+
     public function testMachineTranslationIsPublishedUntilAnEditedVersionReplacesIt(): void
     {
         $published = $this->page('asylum', 'page', '/services/asylum', ['title' => 'Убежище', 'body' => '<p>Да</p>']);

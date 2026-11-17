@@ -106,3 +106,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "An old address with a slash at its end (/services/, /news/group/) was redirected in two hops: first to its form without the slash, then by its redirect. A redirect is now followed at once from any form of its address, one hop as search engines need. Found on michalevic.org after its old service addresses were imported."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "A site names the people it writes about in site.json schema.people: names per language, other names, the item of the page about them, and what schema.org says of a person. An author field with any of their names becomes a reference to one person by @id (the site's address with #key) and the page about them; that page gives the person in full with the addresses of the site's own domain, so no text holds a domain of its own; \"#key\" in the organization (its founder) is the same reference. For michalevic.org, where Ales Michalevic is named as Ales (Alaksiej), Alexey or Aleś. 27 tests, 162 assertions."

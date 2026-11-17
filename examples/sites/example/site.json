@@ -136,6 +136,26 @@
           "addressCountry": "LT"
         }
       }
+    },
+    "people": {
+      "anna": {
+        "name": {
+          "ru": "Анна Петрова",
+          "en": "Anna Petrova"
+        },
+        "alternateName": [
+          "Анна (Ганна) Петрова"
+        ],
+        "page": "about",
+        "jobTitle": {
+          "ru": "Адвокат",
+          "en": "Advocate"
+        },
+        "image": "/assets/anna.webp",
+        "sameAs": [
+          "https://example.org/anna"
+        ]
+      }
     }
   },
   "forms": {

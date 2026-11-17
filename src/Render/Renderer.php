@@ -116,8 +116,16 @@ final class Renderer
     {
         $graph = [];
         $organization = self::localize($site->declaration['schema']['organization'] ?? null, $lang, $site->defaultLanguage);
+        $organization = $this->withPeople($site, $organization, $lang);
         if (is_array($organization) && $path === $site->home($lang)) {
             $graph[] = ['@type' => $organization['@type'] ?? 'Organization', 'url' => $site->url($site->home($lang))] + $organization;
+        }
+        // a person the site describes (site.json schema.people) is given in full on the page about them (its key page)
+        $itemKey = (string) $this->db->value('SELECT item_key FROM item WHERE id = ?', [$itemId]);
+        foreach ((array) ($site->declaration['schema']['people'] ?? []) as $key => $person) {
+            if (is_array($person) && ($person['page'] ?? null) === $itemKey) {
+                $graph[] = $this->person($site, (string) $key, $lang, true);
+            }
         }
         $type = $site->declaration['kinds'][$kind]['schema'] ?? null;
         if ($type === 'Person') {
@@ -149,7 +157,9 @@ final class Renderer
                 $node['description'] = (string) $fields['description'];
             }
             if (!empty($fields['author'])) {
-                $node['author'] = ['@type' => 'Person', 'name' => (string) $fields['author']];
+                // an author the site describes is the same person on every page: a reference by @id, whatever form of the name
+                $key = $this->personKey($site, (string) $fields['author']);
+                $node['author'] = $key !== null ? $this->person($site, $key, $lang, false) : ['@type' => 'Person', 'name' => (string) $fields['author']];
             }
             if (!empty($fields['image'])) {
                 $node['image'] = $site->url('/' . ltrim((string) $fields['image'], '/'));
@@ -169,6 +179,60 @@ final class Renderer
      * A value of the site's declaration in one language: an object whose keys are all language tags of the site gives the
      * one of this language (else of the default); everything else is kept, its parts read the same way.
      */
+    /**
+     * A person of site.json schema.people in the page's language: in full (every property the site gives, links made absolute)
+     * on the page about them, else a reference: @id, name and the page about them. The @id is the site's address with
+     * #key, the same on every page and in every language, so that search engines join every mention into one person.
+     */
+    private function person(Site $site, string $key, string $lang, bool $full): array
+    {
+        $p = (array) self::localize($site->declaration['schema']['people'][$key] ?? [], $lang, $site->defaultLanguage);
+        $node = ['@type' => $p['@type'] ?? 'Person', '@id' => $site->url('/') . '#' . $key, 'name' => (string) ($p['name'] ?? $key)];
+        $page = isset($p['page']) ? $this->db->value('SELECT id FROM item WHERE site_id = ? AND item_key = ?', [$site->id, (string) $p['page']]) : null;
+        $path = $page !== null ? $this->routes->pathOf((int) $page, $lang) : null;
+        if ($path !== null) {
+            $node['url'] = $site->url($path);
+        }
+        if (!$full) {
+            return $node;
+        }
+        unset($p['@type'], $p['name'], $p['page']);
+        if (isset($p['image']) && is_string($p['image']) && str_starts_with($p['image'], '/')) {
+            $p['image'] = $site->url($p['image']);
+        }
+        return $node + (array) $this->withPeople($site, $p, $lang);
+    }
+
+    /** The key of the person of site.json schema.people a name stands for: the key itself, or any of their names in any language. */
+    private function personKey(Site $site, string $name): ?string
+    {
+        $norm = fn (string $v) => mb_strtolower(trim(preg_replace('/\s+/u', ' ', $v)));
+        foreach ((array) ($site->declaration['schema']['people'] ?? []) as $key => $p) {
+            $names = [(string) $key];
+            foreach (['name', 'alternateName'] as $field) {
+                $value = $p[$field] ?? [];
+                foreach (is_array($value) ? $value : [$value] as $v) {
+                    foreach (is_array($v) ? $v : [$v] as $one) {
+                        $names[] = (string) $one;
+                    }
+                }
+            }
+            if (in_array($norm($name), array_map($norm, $names), true)) {
+                return (string) $key;
+            }
+        }
+        return null;
+    }
+
+    /** Values "#key" that name a person of site.json schema.people become references to them (as an organization's founder). */
+    private function withPeople(Site $site, mixed $value, string $lang): mixed
+    {
+        if (is_string($value) && str_starts_with($value, '#') && isset($site->declaration['schema']['people'][substr($value, 1)])) {
+            return $this->person($site, substr($value, 1), $lang, false);
+        }
+        return is_array($value) ? array_map(fn ($v) => $this->withPeople($site, $v, $lang), $value) : $value;
+    }
+
     public static function localize(mixed $value, string $lang, string $default): mixed
     {
         if (!is_array($value)) {
