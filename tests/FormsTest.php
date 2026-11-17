@@ -164,6 +164,16 @@ final class FormsTest extends TestCase
         $this->assertSame([], $this->entries());
     }
 
+    public function testEntriesAreForgottenAfterTheDaysTheirFormKeepsThem(): void
+    {
+        $this->post($this->valid());
+        $this->post($this->valid(), client: '198.51.100.9');
+        $this->k->db->exec('UPDATE form_entry SET created_at = ? WHERE id = 1', [$this->k->db->now() - 366 * 86400]);
+        $this->assertSame(['example/contact' => 1], Forms::expire($this->k->db, $this->k->sites), 'older than keep_days: gone, mailed or not');
+        $this->assertCount(1, $this->entries());
+        $this->assertSame([], Forms::expire($this->k->db, $this->k->sites));
+    }
+
     public function testALetterCannotCarryHeadersOfItsOwn(): void
     {
         $m = Mailer::message('forms@example.test', 'Example', ['office@example.test'], "Hi\r\nBcc: victim@example.org", "Body\n.", 'x@example.org');

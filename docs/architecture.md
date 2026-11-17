@@ -98,7 +98,8 @@ Forms: a site declares its forms in `site.json` under `forms` (fields with type,
 addresses to notify, a trap field for robots). A form posts to `/_ramonak/form/<name>` from the site's own pages; the entry
 is checked, kept in `form_entry` and mailed by the job `form.notify` through the mail of the installation (`mail` in
 `shared/config.php`: the host's sendmail or a mail server), and the visitor returns to the page with `#<name>-sent` or
-`#<name>-error`, so built pages stay the same for everyone.
+`#<name>-error`, so built pages stay the same for everyone. A form's `keep_days` bounds how long its entries are kept: `jobs:run`
+deletes older ones.
 
 Every operation that changes something writes an `event` in the same transaction.
 

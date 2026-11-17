@@ -66,6 +66,29 @@ final class Forms
     }
 
     /**
+     * Forgets what a form keeps longer than its declaration allows ("keep_days" of a form in site.json): the entries older than
+     * that are deleted, mailed or not. A form without keep_days keeps its entries until form.delete.
+     * @return array<string,int> deleted entries by site and form
+     */
+    public static function expire(Db $db, \Ramonak\Sites $sites): array
+    {
+        $done = [];
+        foreach ($sites->keys() as $key) {
+            $site = $sites->byKey($key);
+            foreach ((array) ($site?->declaration['forms'] ?? []) as $name => $form) {
+                $days = (int) ($form['keep_days'] ?? 0);
+                if ($site !== null && $days > 0) {
+                    $n = $db->exec('DELETE FROM form_entry WHERE site_id = ? AND form = ? AND created_at < ?', [$site->id, (string) $name, $db->now() - $days * 86400]);
+                    if ($n > 0) {
+                        $done[$key . '/' . $name] = $n;
+                    }
+                }
+            }
+        }
+        return $done;
+    }
+
+    /**
      * The values a declaration asks for, trimmed and checked; null when one is missing, too long or of the wrong form.
      * @return array<string,string|bool>|null
      */

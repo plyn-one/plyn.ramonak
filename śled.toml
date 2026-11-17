@@ -118,3 +118,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "Built the images as the owner of Legal Status decided (17 Nov 2026). media.add keeps an image once as AVIF, upright, without metadata, no larger than site.json media.max_side (2000 px by default), named by the checksum of what was sent; the original is not kept; a host that cannot write AVIF refuses images. /media/w<width>/ab/<sha>.avif, a width of the ladder 160 to 2000, is made on first request and written for the web server; jobs:run keeps that cache within media_cache_files and media_cache_mb once an hour, the copies asked for longest ago going first. A page's img of the library gets srcset, sizes, width, height, lazy loading and its alt in the page's language; image() for templates. bin/ramonak media:add takes files from disk, op reads json from stdin with -. On the Legal Status hosting Imagick cannot write AVIF and GD can: a 320 px copy of a 205 KB JPEG is 9.8 KB, made in 0.09 s. 32 tests, 186 assertions."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "A form keeps its entries no longer than its declaration says: keep_days of a form in site.json, and jobs:run deletes older entries, mailed or not. For michalevic.org, whose privacy policy, by the owner, keeps a request a year after the last contact. 33 tests, 189 assertions."

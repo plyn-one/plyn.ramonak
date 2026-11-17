@@ -5,7 +5,8 @@ declare(strict_types=1);
 // The command line of an installation:
 //   migrate                       apply new migrations
 //   site:sync <site>              write a site's row, domains and languages from its site.json
-//   jobs:run [limit]              removes built pages of changed templates, runs due background jobs (cron, every minute) and,
+//   jobs:run [limit]              removes built pages of changed templates, runs due background jobs (cron, every minute),
+//                                 deletes form entries older than their form's keep_days and,
 //                                 once an hour, keeps the cache of smaller image copies within media_cache_files and media_cache_mb
 //   op <site> <operation> [json|-] run one operation as the installation's administrator (actor cli); - reads the json from stdin
 //   media:add <site> <file>...    each file into the media library (an image as AVIF), with alt from --alt='{"ru": "..."}'
@@ -37,6 +38,7 @@ try {
             // built pages of a site whose templates changed are removed first, then the due jobs run
             $templates = $kernel->templates->check();
             $result = ['templates_purged' => $templates] + $kernel->queue->run($kernel->jobHandlers(), (int) ($args[1] ?? 20));
+            $result['forms_expired'] = Ramonak\Forms\Forms::expire($kernel->db, $kernel->sites);
             $mark = $config->require('var_dir') . '/media-cleaned';
             if ($kernel->images !== null && (!is_file($mark) || filemtime($mark) < time() - 3600)) {
                 touch($mark);
