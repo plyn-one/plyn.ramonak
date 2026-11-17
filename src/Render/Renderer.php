@@ -56,6 +56,11 @@ final class Renderer
             'languages' => $this->languageLinks($site, (int) $route['item_id'], $lang),
             'request' => ['query' => $query],
         ];
+        // a page of a list in pages (?page=N, N above 1) names itself as canonical: each page is indexed on its own
+        $number = (string) ($query['page'] ?? '');
+        if (preg_match('/^[0-9]{1,6}$/', $number) && (int) $number > 1) {
+            $context['seo']['canonical'] = $site->url($path) . '?page=' . (int) $number;
+        }
         $html = $this->env($site)->render((string) ($kind['template'] ?? $route['kind'] . '.twig'), $context);
         return ['html' => $html, 'deps' => array_keys($this->deps)];
     }
