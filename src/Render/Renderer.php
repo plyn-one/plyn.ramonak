@@ -201,7 +201,13 @@ final class Renderer
         $this->deps['kind:' . $site->id . ':' . $kind] = true;
         $limit = max(1, min(500, (int) ($options['limit'] ?? 50)));
         $offset = max(0, (int) ($options['offset'] ?? 0));
-        $order = ($options['order'] ?? 'newest') === 'position' ? 'i.position, i.id' : 'p.published_at DESC, i.id DESC';
+        // newest: last published on this server first; date: by the item's own date (of the article, the interview), newest
+        // first, which is what a reader expects of news moved from an old site in one day; position: as the site orders them
+        $order = match ((string) ($options['order'] ?? 'newest')) {
+            'position' => 'i.position, i.id',
+            'date' => "json_extract(v.fields, '$.date') DESC, p.published_at DESC, i.id DESC",
+            default => 'p.published_at DESC, i.id DESC',
+        };
         $params = [$site->id, $kind, $lang];
         $parent = '';
         if (isset($options['parent'])) {

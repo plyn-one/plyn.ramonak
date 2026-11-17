@@ -142,6 +142,18 @@ final class KernelTest extends TestCase
         $this->assertFileExists($this->dir . '/public/_cache/example.test/news/one/index.html', 'a page that lists nothing stays built');
     }
 
+    public function testItemsAreOrderedByTheirOwnDateWhenAsked(): void
+    {
+        // news moved from an old site in one day: published here in any order, read by the date each was written
+        $this->page('n1', 'news', '/news/later', ['title' => 'Позже', 'date' => '2021-05-14']);
+        $this->page('n2', 'news', '/news/earlier', ['title' => 'Раньше', 'date' => '2017-04-21']);
+        $this->page('n3', 'news', '/news/middle', ['title' => 'Между', 'date' => '2018-04-28']);
+        $r = new \Ramonak\Render\Renderer($this->k->db, $this->k->publication, $this->k->routes, $this->dir . '/var', false, true);
+        $this->assertSame(['n1', 'n3', 'n2'], array_column($r->items($this->site, 'ru', 'news', ['order' => 'date']), 'key'));
+        $this->assertSame(['n3', 'n2', 'n1'], array_column($r->items($this->site, 'ru', 'news'), 'key'), 'newest is the order of publication here');
+        $this->assertSame(['n1'], array_column($r->items($this->site, 'ru', 'news', ['order' => 'date', 'limit' => 1]), 'key'));
+    }
+
     public function testMachineTranslationIsPublishedUntilAnEditedVersionReplacesIt(): void
     {
         $published = $this->page('asylum', 'page', '/services/asylum', ['title' => 'Убежище', 'body' => '<p>Да</p>']);

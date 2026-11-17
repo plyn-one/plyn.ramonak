@@ -88,3 +88,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "Found on the Legal Status hosting while migrating 002-forms.sql: MariaDB commits DDL by itself, so Db::tx called commit with no transaction open and the command died with exit 255 after the migration had been applied, the depth of transactions going below zero on the way. Db::tx now decrements its depth once and commits only a transaction still open. 25 tests, 155 assertions; the case needs MariaDB and is not reproduced on SQLite."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [2,2]
+vynik = "items() of a template orders by the item's own date when asked (order: date, newest first): the news of michalevic.org move from the old site in one day, so the time of publication here says nothing of their order. json_extract on the field date works in SQLite and in MariaDB 11.4 of the Legal Status hosting. 26 tests, 158 assertions."
