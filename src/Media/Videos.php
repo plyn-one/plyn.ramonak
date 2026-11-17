@@ -22,6 +22,8 @@ final class Videos
 
     public function rewrite(string $html, int $siteId, string $lang): string
     {
+        // a paragraph that holds only the player is the figure itself: a figure cannot stand inside a p
+        $html = (string) preg_replace('~<p>\s*(' . substr(self::IFRAME, 1, -2) . ')\s*</p>~i', '$1', $html);
         return (string) preg_replace_callback(self::IFRAME, function (array $m) use ($siteId, $lang): string {
             $id = $m[1];
             $row = $this->db->one("SELECT title, cover FROM video WHERE site_id = ? AND provider = 'youtube' AND video_id = ?", [$siteId, $id]);

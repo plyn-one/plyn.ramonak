@@ -74,10 +74,11 @@ final class VideoTest extends TestCase
     {
         $this->op('content.create', ['item' => 'n1', 'kind' => 'news', 'lang' => 'ru', 'path' => '/news/interview']);
         $this->op('content.save', ['item' => 'n1', 'lang' => 'ru', 'publish' => true, 'fields' => ['title' => 'Как избежать экстрадиции?', 'date' => '2021-05-14',
-            'body' => '<p>Эфир.</p><iframe width="100%" height="480" src="https://www.youtube.com/embed/JSNhVoCNFOg" title="YouTube video player" allowfullscreen></iframe>',
+            'body' => '<p>Эфир.</p><p><iframe width="100%" height="480" src="https://www.youtube.com/embed/JSNhVoCNFOg" title="YouTube video player" allowfullscreen></iframe></p>',
             'source_url' => 'https://www.youtube.com/watch?v=JSNhVoCNFOg']]);
         $html = $this->k->handle(new Request('GET', 'example.test', '/news/interview', ''))->body;
         $this->assertStringNotContainsString('<iframe', $html, 'nothing of YouTube loads with the page');
+        $this->assertStringContainsString('<p>Эфир.</p><figure class="ramonak-video">', $html, 'the paragraph that held the player is gone');
         $this->assertStringContainsString('<figure class="ramonak-video"><a href="https://www.youtube.com/watch?v=JSNhVoCNFOg" data-video="https://www.youtube-nocookie.com/embed/JSNhVoCNFOg?autoplay=1" aria-label="Смотреть видео" rel="noopener"><span class="ramonak-video-play" aria-hidden="true"></span></a></figure>', $html);
         $ld = json_decode(preg_replace('#^.*<script type="application/ld\+json">(.*?)</script>.*$#s', '$1', $html), true)['@graph'][0];
         $this->assertSame('https://www.youtube.com/watch?v=JSNhVoCNFOg', $ld['isBasedOn'], 'the recording the text was made from');
