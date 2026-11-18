@@ -137,6 +137,35 @@ final class KernelTest extends TestCase
         $this->assertSame(405, $this->get('/uslugi/asylum', method: 'DELETE')->status);
     }
 
+    public function testAnUnpublishedItemIsDeletedForGood(): void
+    {
+        $this->page('old', 'page', '/old', ['title' => 'Старая']);
+        $this->op('route.set', ['item' => 'old', 'lang' => 'en', 'path' => '/en/old']);
+        $this->op('content.save', ['item' => 'old', 'lang' => 'en', 'fields' => ['title' => 'Old'], 'publish' => true]);
+        $this->assertSame(200, $this->get('/en/old')->status);
+        try {
+            $this->op('content.delete', ['item' => 'old']);
+            $this->fail('a published item is not deleted');
+        } catch (OperationError $e) {
+            $this->assertSame('item_published', $e->error);
+        }
+        $this->op('publication.unpublish', ['item' => 'old', 'lang' => 'ru']);
+        $this->op('publication.unpublish', ['item' => 'old', 'lang' => 'en']);
+        $done = $this->op('content.delete', ['item' => 'old']);
+        $this->assertTrue($done['deleted']);
+        $this->assertSame(2, $done['versions']);
+        $this->assertSame(404, $this->get('/old')->status);
+        $this->assertSame(404, $this->get('/en/old')->status);
+        try {
+            $this->op('content.read', ['item' => 'old']);
+            $this->fail('a deleted item is gone');
+        } catch (OperationError $e) {
+            $this->assertSame('item_unknown', $e->error);
+        }
+        $this->page('old', 'page', '/old', ['title' => 'Новая']);
+        $this->assertSame(200, $this->get('/old')->status, 'its key and address are free again');
+    }
+
     public function testListsAreRebuiltWhenAnItemOfTheirKindIsPublished(): void
     {
         $this->page('home', 'home', '/', ['title' => 'Бюро']);

@@ -25,6 +25,7 @@ final class Operations
         'content.read' => ['supracoŭnik', 'contentRead', false],
         'content.create' => ['davierany', 'contentCreate', true],
         'content.save' => ['supracoŭnik', 'contentSave', true],
+        'content.delete' => ['davierany', 'contentDelete', true],
         'publication.publish' => ['davierany', 'publish', true],
         'publication.rollback' => ['davierany', 'rollback', true],
         'publication.unpublish' => ['davierany', 'unpublish', true],
@@ -193,6 +194,36 @@ final class Operations
             $result['publication'] = $this->publishVersion($site, $actor, $item, $lang, $version);
         }
         return $result;
+    }
+
+    /**
+     * An item removed for good: its versions, publications, reviews and pages. Only an item published in no language and with
+     * no children; a published one is unpublished first. Its addresses answer 404 as if it had never been; the event log keeps
+     * that it was deleted.
+     */
+    private function contentDelete(Site $site, Actor $actor, array $input): array
+    {
+        $item = $this->content->item($site, (string) self::need($input, 'item'));
+        $id = (int) $item['id'];
+        if ((int) $this->db->value('SELECT COUNT(*) FROM publication WHERE item_id = ? AND current = 1', [$id]) > 0) {
+            throw new OperationError('item_published', "Item {$item['item_key']} is published; unpublish it in every language first", 409);
+        }
+        if ((int) $this->db->value('SELECT COUNT(*) FROM item WHERE parent_id = ?', [$id]) > 0) {
+            throw new OperationError('item_has_children', "Item {$item['item_key']} is the parent of other items", 409);
+        }
+        $paths = array_column($this->db->all('SELECT path FROM route WHERE item_id = ?', [$id]), 'path');
+        $this->db->exec('DELETE FROM review WHERE publication_id IN (SELECT id FROM publication WHERE item_id = ?)', [$id]);
+        $this->db->exec('UPDATE publication SET replaces_id = NULL WHERE item_id = ?', [$id]);
+        $this->db->exec('DELETE FROM publication WHERE item_id = ?', [$id]);
+        $this->db->exec('UPDATE item_version SET source_version_id = NULL WHERE item_id = ?', [$id]);
+        $versions = $this->db->exec('DELETE FROM item_version WHERE item_id = ?', [$id]);
+        $this->db->exec('DELETE FROM route WHERE item_id = ?', [$id]);
+        $this->db->exec('DELETE FROM item WHERE id = ?', [$id]);
+        $this->cache->invalidate(['item:' . $id, 'kind:' . $site->id . ':' . $item['kind']]);
+        foreach ($paths as $path) {
+            $this->cache->purgePath($site->primaryDomain(), (string) $path);
+        }
+        return ['item' => $item['item_key'], 'deleted' => true, 'versions' => $versions, 'paths' => $paths];
     }
 
     private function publish(Site $site, Actor $actor, array $input): array

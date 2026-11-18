@@ -91,7 +91,7 @@ An operation is a PHP class with a name (`content.save`), an input schema, the p
 operations serve agents, a later administration interface and an API; none of them has logic of its own.
 
 First slice: `site.status`, `content.list`, `content.read`, `content.save` (a new version), `publication.publish`,
-`publication.rollback`, `review.add`, `route.set`, `redirect.set`, `redirect.import`, `redirect.delete`, `media.add`, `translation.request`,
+`publication.rollback`, `review.add`, `route.set`, `redirect.set`, `redirect.import`, `redirect.delete`, `content.delete`, `media.add`, `translation.request`,
 `form.list`, `form.delete`, `cache.purge`, `job.list`.
 
 Forms: a site declares its forms in `site.json` under `forms` (fields with type, limit and label per language, the
