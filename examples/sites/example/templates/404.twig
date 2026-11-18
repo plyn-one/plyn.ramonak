@@ -1,3 +1,4 @@
 <!doctype html>
 <html lang="{{ site.lang }}"><head>{% include '@ramonak/head.twig' %}</head>
-<body><main data-page-content><h1>404</h1></main></body></html>
+<body><nav>{% for l in languages %}<a href="{{ l.path }}"{% if l.current %} aria-current="true"{% endif %}>{{ l.lang }}</a> {% endfor %}</nav>
+<main data-page-content><h1>404</h1></main></body></html>

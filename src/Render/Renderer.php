@@ -77,7 +77,9 @@ final class Renderer
     {
         $template = (string) ($site->declaration['not_found_template'] ?? '404.twig');
         try {
+            // a missing page has no versions of its own: its language switch leads to the home of each language
             return $this->env($site)->render($template, ['site' => ['key' => $site->key, 'name' => $site->name($lang), 'lang' => $lang],
+                'languages' => $this->languageLinks($site, 0, $lang),
                 'seo' => ['title' => $site->name($lang), 'description' => '', 'canonical' => $site->url('/'), 'alternates' => [], 'x_default' => null,
                     'indexable' => false, 'locale' => $lang, 'og_type' => 'website', 'site_name' => $site->name($lang), 'image' => null, 'jsonld' => null]]);
         } catch (\Twig\Error\LoaderError) {

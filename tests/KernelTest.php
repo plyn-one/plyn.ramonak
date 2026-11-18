@@ -130,7 +130,10 @@ final class KernelTest extends TestCase
         $old = $this->get('/services/services/asylum/');
         $this->assertSame([301, 'https://example.test/uslugi/asylum'], [$old->status, $old->headers['Location']],
             'an old address with a slash at its end is redirected in one hop, as search engines need');
-        $this->assertSame(404, $this->get('/nothing-here')->status);
+        $missing = $this->get('/be/nothing-here');
+        $this->assertSame(404, $missing->status);
+        $this->assertStringContainsString('<a href="/">ru</a> <a href="/be" aria-current="true">be</a> <a href="/en">en</a>', $missing->body,
+            'a missing page switches language to the home of each language');
         $this->assertSame(405, $this->get('/uslugi/asylum', method: 'DELETE')->status);
     }
 
