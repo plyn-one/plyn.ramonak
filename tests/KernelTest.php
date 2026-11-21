@@ -111,6 +111,28 @@ final class KernelTest extends TestCase
         $this->assertStringContainsString('id="contact-name"', $body);
     }
 
+    public function testPrastoraConfigRejectsUnknownOrUnselectedModules(): void
+    {
+        $method = new \ReflectionMethod(\Ramonak\Render\Renderer::class, 'prastoraConfig');
+        $valid = ['base' => '/assets/prastora-v0.2.0', 'modules' => ['header', 'forms'], 'enhance' => ['header']];
+        $this->assertSame($valid, $method->invoke(null, $valid));
+        foreach ([
+            ['base' => 'javascript:invalid', 'modules' => ['header']],
+            ['base' => '/assets/../unsafe', 'modules' => ['header']],
+            ['base' => '/assets/pin', 'modules' => ['unknown']],
+            ['base' => '/assets/pin', 'modules' => [['header']]],
+            ['base' => '/assets/pin', 'modules' => ['header', 'header']],
+            ['base' => '/assets/pin', 'modules' => ['forms'], 'enhance' => ['video']],
+        ] as $invalid) {
+            try {
+                $method->invoke(null, $invalid);
+                $this->fail('invalid module configuration should be rejected');
+            } catch (\InvalidArgumentException $expected) {
+                $this->assertNotSame('', $expected->getMessage());
+            }
+        }
+    }
+
     public function testDraftsAreNotPublicAndRollbackRepublishesTheEarlierVersion(): void
     {
         $this->page('about', 'page', '/about-us', ['title' => 'О нас v1'], publish: false);
