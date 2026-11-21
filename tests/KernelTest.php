@@ -92,6 +92,25 @@ final class KernelTest extends TestCase
         $this->assertSame($r->body, file_get_contents($this->dir . '/public/_cache/example.test/index.html'));
     }
 
+    public function testOptionalPrastoraAdapterRendersWithoutDuplicatingCmsAuthorities(): void
+    {
+        $this->page('adapter-demo', 'prastora_demo', '/adapter-demo',
+            ['title' => 'Prastora example', 'description' => 'A test of optional modules']);
+        $body = $this->get('/adapter-demo')->body;
+        $this->assertSame(1, substr_count($body, 'rel="canonical"'), 'the SEO head stays Ramonak-owned');
+        $this->assertStringContainsString('href="/assets/prastora-v0.2.0/core.css"', $body);
+        $this->assertStringContainsString('href="/assets/prastora-v0.2.0/modules/forms.css"', $body);
+        $this->assertStringContainsString('src="/assets/prastora-v0.2.0/modules/map.js"', $body);
+        $this->assertStringNotContainsString('src="/assets/prastora-v0.2.0/modules/video.js"', $body);
+        $this->assertStringContainsString('data-pr-header', $body);
+        $this->assertStringContainsString('data-pr-languages', $body);
+        $this->assertStringContainsString('data-pr-news', $body);
+        $this->assertStringContainsString('action="/_ramonak/form/contact"', $body);
+        $this->assertStringContainsString('name="_back" value="/adapter-demo"', $body);
+        $this->assertStringContainsString('name="website"', $body);
+        $this->assertStringContainsString('id="contact-name"', $body);
+    }
+
     public function testDraftsAreNotPublicAndRollbackRepublishesTheEarlierVersion(): void
     {
         $this->page('about', 'page', '/about-us', ['title' => 'О нас v1'], publish: false);

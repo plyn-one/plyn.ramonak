@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="{{ site.lang }}">
+<head>
+{% include '@ramonak/head.twig' %}
+{% import '@ramonak/prastora/components.twig' as pr %}
+{{ pr.assets(site.prastora) }}
+</head>
+<body><div data-l="page">
+{{ pr.header(site.name, '/', [{'path': '/', 'label': 'Home', 'current': false}]) }}
+{{ pr.languages(languages) }}
+<main>
+  <h1>{{ page.fields.title }}</h1>
+  <p>{{ page.fields.description|default('') }}</p>
+  {{ pr.news(items('news', {'limit': 2, 'order': 'date'})) }}
+  <h2>Contact</h2>
+  {{ pr.form('contact', site.forms.contact, site.lang, page.path) }}
+</main>
+</div></body></html>

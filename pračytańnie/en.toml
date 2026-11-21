@@ -37,6 +37,7 @@
 "file:examples/sites/example/templates/404.twig" = "the not-found page of the example site"
 "file:examples/sites/example/templates/home.twig" = "the home page of the example site, with a list of news through items()"
 "file:examples/sites/example/templates/layout.twig" = "the layout of the example site: the SEO head of the engine, the language links, one main region"
+"file:examples/sites/example/templates/prastora-demo.twig" = "end-to-end example of the optional Prastora assets, navigation, language, news and contact form macros"
 "file:examples/sites/example/templates/page.twig" = "a page of the example site"
 "file:migrations/001-core.sql" = "the core schema: sites, domains, languages, items, versions, publications, reviews, routes, media, jobs, events, built pages, bridge nonces"
 "file:public/index.php" = "the front controller: a request no built page answers"

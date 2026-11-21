@@ -26,6 +26,13 @@
     }
   ],
   "kinds": {
+    "prastora_demo": {
+      "template": "prastora-demo.twig",
+      "fields": {
+        "title": { "type": "text", "required": true },
+        "description": { "type": "text" }
+      }
+    },
     "home": {
       "template": "home.twig",
       "fields": {
@@ -163,6 +170,11 @@
         ]
       }
     }
+  },
+  "prastora": {
+    "base": "/assets/prastora-v0.2.0",
+    "modules": ["header", "forms", "news", "languages", "video", "map"],
+    "enhance": ["header", "map"]
   },
   "forms": {
     "contact": {

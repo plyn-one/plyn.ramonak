@@ -35,6 +35,7 @@ kola = "usie"
 "file:examples/sites/example/templates/404.twig" = { faza = "ściah", rola = "prajava" }
 "file:examples/sites/example/templates/home.twig" = { faza = "ściah", rola = "prajava" }
 "file:examples/sites/example/templates/layout.twig" = { faza = "ściah", rola = "prajava" }
+"file:examples/sites/example/templates/prastora-demo.twig" = { faza = "ściah", rola = "prajava" }
 "file:examples/sites/example/templates/page.twig" = { faza = "ściah", rola = "prajava" }
 "file:migrations/001-core.sql" = { faza = "ściah", rola = "prajava" }
 "file:public/index.php" = { faza = "ściah", rola = "prajava" }
