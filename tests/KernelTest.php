@@ -111,6 +111,65 @@ final class KernelTest extends TestCase
         $this->assertStringContainsString('id="contact-name"', $body);
     }
 
+    public function testPrastoraNewsUsesExistingPublicationsAndCanonicalPagination(): void
+    {
+        $this->page('adapter-demo', 'prastora_demo', '/adapter-demo',
+            ['title' => 'Prastora example', 'description' => 'News and form']);
+        $this->page('news-old', 'news', '/news/old',
+            ['title' => 'Old news', 'description' => 'Old summary', 'date' => '2020-01-01']);
+        $this->page('news-new', 'news', '/news/new',
+            ['title' => 'New news', 'description' => 'New summary', 'date' => '2026-11-01']);
+        $this->page('news-mid', 'news', '/news/mid',
+            ['title' => 'Middle news', 'description' => 'Middle summary', 'date' => '2023-01-01']);
+
+        $first = $this->get('/adapter-demo')->body;
+        $this->assertStringContainsString('New news', $first);
+        $this->assertStringContainsString('Middle news', $first);
+        $this->assertStringNotContainsString('Old news', $first);
+        $this->assertStringContainsString('href="/adapter-demo?page=2"', $first);
+        $this->assertStringContainsString('rel="next"', $first);
+        $this->assertStringContainsString('rel="canonical" href="https://example.test/adapter-demo"', $first);
+        $this->assertSame(1, substr_count($first, 'rel="canonical"'));
+
+        $second = $this->get('/adapter-demo', query: 'page=2')->body;
+        $this->assertStringContainsString('Old news', $second);
+        $this->assertStringNotContainsString('New news', $second);
+        $this->assertStringNotContainsString('Middle news', $second);
+        $this->assertStringContainsString('rel="prev" href="/adapter-demo"', $second);
+        $this->assertStringContainsString('aria-current="page">2</a>', $second);
+        $this->assertStringContainsString('rel="canonical" href="https://example.test/adapter-demo?page=2"', $second);
+        $this->assertSame(1, substr_count($second, 'rel="canonical"'), 'page SEO has one owner');
+        $this->assertStringNotContainsString('rel="next"', $second);
+
+        $invalid = $this->get('/adapter-demo', query: 'page=invalid')->body;
+        $this->assertStringContainsString('New news', $invalid, 'non-numeric pages use the first list');
+        $empty = $this->get('/adapter-demo', query: 'page=99')->body;
+        $this->assertStringNotContainsString('Old news', $empty);
+        $this->assertStringNotContainsString('New news', $empty);
+        $this->assertStringContainsString('rel="canonical" href="https://example.test/adapter-demo?page=99"', $empty);
+
+        $renderer = new \Ramonak\Render\Renderer(
+            $this->k->db, $this->k->publication, $this->k->routes, $this->dir . '/var', false, true
+        );
+        foreach ([0, 101] as $bad) {
+            try {
+                $renderer->prastoraNewsPage($this->site, 'ru', [], $bad);
+                $this->fail('out of range page sizes must be refused');
+            } catch (\InvalidArgumentException $expected) {
+                $this->assertNotSame('', $expected->getMessage());
+            }
+        }
+    }
+
+    public function testPrastoraLanguagesEnhancerRequiresSelectedCss(): void
+    {
+        $method = new \ReflectionMethod(\Ramonak\Render\Renderer::class, 'prastoraConfig');
+        $allowed = ['base' => '/assets/pin', 'modules' => ['languages'], 'enhance' => ['languages']];
+        $this->assertSame($allowed, $method->invoke(null, $allowed));
+        $this->expectException(\InvalidArgumentException::class);
+        $method->invoke(null, ['base' => '/assets/pin', 'modules' => ['forms'], 'enhance' => ['languages']]);
+    }
+
     public function testPrastoraConfigRejectsUnknownOrUnselectedModules(): void
     {
         $method = new \ReflectionMethod(\Ramonak\Render\Renderer::class, 'prastoraConfig');
