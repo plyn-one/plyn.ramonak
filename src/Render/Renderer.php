@@ -321,6 +321,28 @@ final class Renderer
             WHERE i.site_id = ? AND i.kind = ? AND i.state = 'active'", [$lang, $site->id, $kind]);
     }
 
+    /**
+     * Source-only Prastora news pager: reused Ramonak's published index, no second publication authority.
+     * @param array<string,string> $query
+     * @return array{items:list<array<string,mixed>>,page:int,pages:int,total:int,per_page:int}
+     */
+    public function prastoraNewsPage(Site $site, string $lang, array $query, int $perPage = 10): array
+    {
+        if ($perPage < 1 || $perPage > 100) {
+            throw new \InvalidArgumentException('prastora page size must be between 1 and 100');
+        }
+        $raw = (string) ($query['page'] ?? '1');
+        $page = preg_match('/^[1-9][0-9]{0,5}$/D', $raw) ? (int) $raw : 1;
+        $total = $this->count($site, $lang, 'news');
+        $pages = max(1, (int) ceil($total / $perPage));
+        return [
+            'items' => $page <= $pages
+                ? $this->items($site, $lang, 'news', ['order' => 'date', 'limit' => $perPage, 'offset' => ($page - 1) * $perPage])
+                : [],
+            'page' => $page, 'pages' => $pages, 'total' => $total, 'per_page' => $perPage,
+        ];
+    }
+
     /** Optional UI selection, validated before any Prastora asset URL is rendered. */
     private static function prastoraConfig(mixed $raw): array
     {
@@ -346,7 +368,7 @@ final class Renderer
             }
         }
         foreach ($enhance as $module) {
-            if (!is_string($module) || !in_array($module, ['header', 'video', 'map'], true) || !in_array($module, $modules, true)) {
+            if (!is_string($module) || !in_array($module, ['header', 'languages', 'video', 'map'], true) || !in_array($module, $modules, true)) {
                 throw new \InvalidArgumentException('prastora enhancement must name an enabled script module');
             }
         }
@@ -377,6 +399,10 @@ final class Renderer
             return $this->images?->tag($site->id, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $src, $attrs)
                 ?? '<img src="' . htmlspecialchars($src, ENT_QUOTES) . '" alt="' . htmlspecialchars($attrs['alt'] ?? '', ENT_QUOTES) . '">';
         }, ['needs_context' => true, 'is_safe' => ['html']]));
+        $twig->addFunction(new TwigFunction('prastora_news_page', function (array $context, int $perPage = 10) use ($site): array {
+            return $this->prastoraNewsPage($site, (string) ($context['site']['lang'] ?? $site->defaultLanguage),
+                (array) ($context['request']['query'] ?? []), $perPage);
+        }, ['needs_context' => true]));
         $twig->addFunction(new TwigFunction('count_items', function (array $context, string $kind) use ($site): int {
             return $this->count($site, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $kind);
         }, ['needs_context' => true]));

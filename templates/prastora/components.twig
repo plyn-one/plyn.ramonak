@@ -13,7 +13,26 @@
   {% endif %}
 {% endmacro %}
 
-{% macro header(name, home, navigation) %}
+{# News pager: Ramonak chooses the published subset and canonical; Twig only renders links. #}
+{% macro pagination(pager, path) %}
+{% if pager.pages > 1 %}
+<nav class="pr-news__pagination" aria-label="News pagination">
+  {% if pager.page > 1 %}
+    <a rel="prev" href="{{ path }}{% if pager.page > 2 %}?page={{ pager.page - 1 }}{% endif %}">Previous</a>
+  {% endif %}
+  {% set first = max(1, pager.page - 2) %}
+  {% set last = min(pager.pages, pager.page + 2) %}
+  {% for number in first..last %}
+    <a href="{{ path }}{% if number > 1 %}?page={{ number }}{% endif %}"{% if number == pager.page %} aria-current="page"{% endif %}>{{ number }}</a>
+  {% endfor %}
+  {% if pager.page < pager.pages %}
+    <a rel="next" href="{{ path }}?page={{ pager.page + 1 }}">Next</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro header(name, home, navigation) %
 <header data-pr-header>
   <div class="pr-header__inner">
     <a class="pr-header__brand" href="{{ home }}">{{ name }}</a>

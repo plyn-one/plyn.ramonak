@@ -11,7 +11,9 @@
 <main>
   <h1>{{ page.fields.title }}</h1>
   <p>{{ page.fields.description|default('') }}</p>
-  {{ pr.news(items('news', {'limit': 2, 'order': 'date'})) }}
+  {% set news_page = prastora_news_page(2) %}
+  {{ pr.news(news_page.items) }}
+  {{ pr.pagination(news_page, page.path) }}
   <h2>Contact</h2>
   {{ pr.form('contact', site.forms.contact, site.lang, page.path) }}
 </main>
