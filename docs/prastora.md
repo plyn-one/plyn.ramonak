@@ -47,7 +47,9 @@ Include it once. Import optional UI macros separately:
   {{ pr.languages(languages) }}
   <main>
     <h1>{{ page.fields.title }}</h1>
-    {{ pr.news(items('news', {'limit': 20, 'order': 'date'})) }}
+    {% set news_page = prastora_news_page(20) %}
+    {{ pr.news(news_page.items) }}
+    {{ pr.pagination(news_page, page.path) }}
     {{ pr.form('contact', site.forms.contact, site.lang, page.path) }}
   </main>
 </body>
@@ -75,10 +77,10 @@ assets must remain absent until a visitor opts to load the map.
 
 The example implementation lives at
 `examples/sites/example/templates/prastora-demo.twig`.
-`tests/KernelTest.php` checks that canonical metadata remains singular,
+`tests/KernelTest.php` checks real multi-page news ordering, pagination links, per-page canonical metadata, bounded page sizes and that canonical metadata remains singular,
 the selected modules load, unused scripts do not, language links are
 rendered, and forms retain the existing processing endpoint and
-honeypot. Config validation has negative test cases.
+honeypot. `tests/FormsTest.php` also submits a synthetic contact form from the Prastora example through the original Ramonak endpoint and verifies that Ramonak stores and queues the entry; the adapter creates no new form backend. Config validation has negative test cases.
 
 These tests prove only the adapter's HTML contracts. The full acceptance
 of #1139 also needs browser-based responsive and accessibility checks,
