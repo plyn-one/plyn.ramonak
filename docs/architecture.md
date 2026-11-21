@@ -16,6 +16,10 @@ queue, releases. Outside, and never in this repository:
 - keys and roles: in the Klučnik of the owner's frame;
 - page layout: `plyn-one/plyn.prastora`, linked by each site.
 
+## Site composition with Prastora (target contract)
+
+The shared target contract for the layout/core, opt-in UI modules, optional Ramonak adapter and site-owned design is maintained in [Prastora's site-contract.md](https://github.com/plyn-one/plyn.prastora/blob/main/docs/site-contract.md) (Plyń Laba #1124). This architecture remains the authority for Ramonak's existing publishing, language routing, content, form handling and SEO implementation. The Prastora contract does not change runtime behavior before the associated adapter/tests (#1139) and checker/modules (#1129/#1134) are implemented. An individual site pins compatible releases and keeps its templates and CSS in its own owner's frame.
+
 ## 2. Runtime
 
 - PHP 8.2 or later, no framework. Composer for a few libraries, each chosen for one job: Twig for templates, a router,
