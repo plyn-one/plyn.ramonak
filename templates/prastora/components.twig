@@ -1,0 +1,95 @@
+{# Opt-in Prastora UI adapter. This never replaces @ramonak/head.twig or the CMS operations. #}
+{% macro assets(config) %}
+  {% set base = config.base|default('') %}
+  {% if base %}
+    {% if base ends with '/' %}{% set base = base|slice(0, -1) %}{% endif %}
+    <link rel="stylesheet" href="{{ base }}/core.css">
+    {% for module in config.modules|default([]) %}
+      <link rel="stylesheet" href="{{ base }}/modules/{{ module }}.css">
+    {% endfor %}
+    {% for module in config.enhance|default([]) %}
+      <script type="module" src="{{ base }}/modules/{{ module }}.js"></script>
+    {% endfor %}
+  {% endif %}
+{% endmacro %}
+
+{% macro header(name, home, navigation) %}
+<header data-pr-header>
+  <div class="pr-header__inner">
+    <a class="pr-header__brand" href="{{ home }}">{{ name }}</a>
+    {% if navigation|length %}
+    <nav class="pr-header__nav" aria-label="Primary">
+      <ul>
+      {% for link in navigation %}
+        <li><a href="{{ link.path }}"{% if link.current|default(false) %} aria-current="page"{% endif %}>{{ link.label }}</a></li>
+      {% endfor %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</header>
+{% endmacro %}
+
+{% macro languages(links) %}
+{% if links|length > 1 %}
+<details data-pr-languages>
+  <summary>
+    {% for link in links %}{% if link.current %}{{ link.lang|upper }}{% endif %}{% endfor %}
+  </summary>
+  <ul>
+  {% for link in links %}
+    <li><a href="{{ link.path }}" hreflang="{{ link.lang }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.lang|upper }}</a></li>
+  {% endfor %}
+  </ul>
+</details>
+{% endif %}
+{% endmacro %}
+
+{% macro form(name, definition, lang, back) %}
+<form data-pr-form method="post" action="/_ramonak/form/{{ name|url_encode }}">
+  <input type="hidden" name="_back" value="{{ back }}">
+  {% for key, field in definition.fields|default({}) %}
+    {% set type = field.type|default('text') %}
+    {% set label = field.label[lang]|default(field.label.en|default(key|capitalize)) %}
+    {% if type == 'checkbox' %}
+      <div class="pr-form__choice">
+        <input type="checkbox" name="{{ key }}" id="{{ name }}-{{ key }}" value="1"{% if field.required|default(false) %} required{% endif %}>
+        <label for="{{ name }}-{{ key }}">{{ label }}</label>
+      </div>
+    {% else %}
+      <div class="pr-form__field">
+        <label for="{{ name }}-{{ key }}">{{ label }}</label>
+        {% if type == 'textarea' %}
+          <textarea name="{{ key }}" id="{{ name }}-{{ key }}"{% if field.required|default(false) %} required{% endif %}{% if field.max|default(false) %} maxlength="{{ field.max }}"{% endif %}></textarea>
+        {% else %}
+          <input type="{{ type }}" name="{{ key }}" id="{{ name }}-{{ key }}"{% if field.required|default(false) %} required{% endif %}{% if field.max|default(false) %} maxlength="{{ field.max }}"{% endif %}>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% endfor %}
+  {% if definition.honeypot|default('') %}
+    <div hidden aria-hidden="true">
+      <label for="{{ name }}-trap">Leave blank</label>
+      <input type="text" name="{{ definition.honeypot }}" id="{{ name }}-trap" tabindex="-1" autocomplete="off">
+    </div>
+  {% endif %}
+  <button type="submit">Send</button>
+</form>
+{% endmacro %}
+
+{% macro news(entries) %}
+<div data-pr-news>
+{% for item in entries %}
+  {% set fields = item.fields|default({}) %}
+  <article class="pr-news__item">
+    {% if fields.date|default('') %}
+      <time datetime="{{ fields.date }}">{{ fields.date }}</time>
+    {% else %}
+      <time datetime="{{ item.published_at|date('Y-m-d') }}">{{ item.published_at|date('Y-m-d') }}</time>
+    {% endif %}
+    <h2><a href="{{ item.path }}">{{ fields.title|default(item.key) }}</a></h2>
+    {% if fields.description|default('') %}<p>{{ fields.description }}</p>{% endif %}
+  </article>
+{% endfor %}
+</div>
+{% endmacro %}

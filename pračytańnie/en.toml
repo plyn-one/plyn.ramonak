@@ -65,6 +65,8 @@
 "file:src/Site.php" = "one site: its languages, domains and declared kinds"
 "file:src/Sites.php" = "the sites of an installation: written from site.json, found by host, kept compiled for OPcache"
 "file:templates/head.twig" = "the SEO head every site includes: title, description, canonical, hreflang, robots, Open Graph"
+"dir:templates/prastora" = "optional Prastora template adapters; no new CMS authority"
+"file:templates/prastora/components.twig" = "Twig macros for Prastora asset selection, navigation, language switch, forms and news from existing Ramonak context"
 "file:tests/KernelTest.php" = "the first slice end to end on SQLite: publication and rollback, addresses, lists and built pages, machine translation, indexing, levels, the bridge, migrations"
 "dir:examples/sites/prefixed" = "an example site whose languages all have prefixes, its default English; it uses the templates of the example site"
 "file:examples/sites/prefixed/site.json" = "the declaration of the prefixed example site"
