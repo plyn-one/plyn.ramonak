@@ -92,6 +92,26 @@ final class FormsTest extends TestCase
         $this->assertNull($this->sent[1]['replyTo']);
     }
 
+    public function testPrastoraContactFormSubmitsToRamonakWithoutParallelProcessing(): void
+    {
+        $actor = new Actor('m-1', 'davierany', 'claude');
+        $this->k->operations->run($this->site, $actor, 'content.create',
+            ['item' => 'adapter-demo', 'kind' => 'prastora_demo', 'lang' => 'ru', 'path' => '/adapter-demo']);
+        $this->k->operations->run($this->site, $actor, 'content.save',
+            ['item' => 'adapter-demo', 'lang' => 'ru',
+             'fields' => ['title' => 'Adapter', 'description' => 'Contact form'], 'publish' => true]);
+        $rendered = $this->k->handle(new Request('GET', 'example.test', '/adapter-demo', ''))->body;
+        $this->assertStringContainsString('action="/_ramonak/form/contact"', $rendered);
+        $this->assertStringContainsString('name="_back" value="/adapter-demo"', $rendered);
+        $this->assertStringContainsString('name="website"', $rendered);
+        $response = $this->post($this->valid(['_back' => '/adapter-demo']));
+        $this->assertSame(303, $response->status);
+        $this->assertSame('https://example.test/adapter-demo#contact-sent', $response->headers['Location']);
+        $this->assertCount(1, $this->entries());
+        $this->assertSame('/adapter-demo', $this->entries()[0]['page']);
+        $this->assertSame([], $this->sent, 'mailing is queued by the existing Ramonak worker, not by the adapter');
+    }
+
     public function testWhatIsMissingOrWrongIsNotKept(): void
     {
         foreach ([['consent' => ''], ['name' => '   '], ['message' => str_repeat('a', 5001)], ['name' => ['a', 'b']]] as $bad) {

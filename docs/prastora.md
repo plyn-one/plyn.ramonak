@@ -22,7 +22,7 @@ serve the selected files under its own domain at `base`.
 No runtime dependency on GitHub, a CDN or another backend is introduced.
 
 `modules` names individual opt-in CSS files. `enhance` selects optional
-JavaScript only for header, video or map; every selected script must have
+JavaScript only for header, languages, video or map; every selected script must have
 its corresponding CSS module. An empty or absent `prastora` means that
 Ramonak renders exactly as it did before. Unknown names, duplicates,
 malformed lists, unsupported enhancers or non-local base URLs fail
