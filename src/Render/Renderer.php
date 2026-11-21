@@ -340,9 +340,6 @@ final class Renderer
             throw new \InvalidArgumentException('prastora modules and enhance must be lists');
         }
         $allowed = ['header', 'forms', 'news', 'languages', 'video', 'map'];
-        if (count($modules) !== count(array_unique($modules)) || count($enhance) !== count(array_unique($enhance))) {
-            throw new \InvalidArgumentException('prastora module names must not repeat');
-        }
         foreach ($modules as $module) {
             if (!is_string($module) || !in_array($module, $allowed, true)) {
                 throw new \InvalidArgumentException('unknown prastora module');
@@ -352,6 +349,9 @@ final class Renderer
             if (!is_string($module) || !in_array($module, ['header', 'video', 'map'], true) || !in_array($module, $modules, true)) {
                 throw new \InvalidArgumentException('prastora enhancement must name an enabled script module');
             }
+        }
+        if (count($modules) !== count(array_unique($modules)) || count($enhance) !== count(array_unique($enhance))) {
+            throw new \InvalidArgumentException('prastora module names must not repeat');
         }
         return ['base' => $base, 'modules' => $modules, 'enhance' => $enhance];
     }
