@@ -51,7 +51,9 @@ final class Renderer
         $fields = $current['fields'];
         $path = $this->routes->pathOf((int) $route['item_id'], $lang) ?? '/';
         $context = [
-            'site' => ['key' => $site->key, 'name' => $site->name($lang), 'lang' => $lang, 'settings' => $site->declaration['settings'] ?? []],
+            'site' => ['key' => $site->key, 'name' => $site->name($lang), 'lang' => $lang, 'settings' => $site->declaration['settings'] ?? [],
+                'forms' => array_map(static fn (array $form) => ['title' => $form['title'] ?? [], 'fields' => $form['fields'] ?? [], 'honeypot' => $form['honeypot'] ?? ''], (array) ($site->declaration['forms'] ?? [])),
+                'prastora' => self::prastoraConfig($site->declaration['prastora'] ?? null)],
             'page' => ['key' => $route['item_key'], 'kind' => $route['kind'], 'fields' => $fields, 'path' => $path, 'url' => $site->url($path),
                 'published_at' => (int) $current['published_at'], 'origin' => $current['origin']],
             'seo' => $this->seo($site, (int) $route['item_id'], (string) $route['kind'], $lang, $path, $fields, (int) $current['published_at']),
@@ -317,6 +319,41 @@ final class Renderer
             JOIN publication p ON p.item_id = i.id AND p.lang = ? AND p.current = 1
             JOIN route r ON r.item_id = i.id AND r.lang = p.lang AND r.status = 200
             WHERE i.site_id = ? AND i.kind = ? AND i.state = 'active'", [$lang, $site->id, $kind]);
+    }
+
+    /** Optional UI selection, validated before any Prastora asset URL is rendered. */
+    private static function prastoraConfig(mixed $raw): array
+    {
+        if ($raw === null) {
+            return [];
+        }
+        if (!is_array($raw) || !is_string($raw['base'] ?? null)) {
+            throw new \InvalidArgumentException('prastora requires a base asset path');
+        }
+        $base = rtrim($raw['base'], '/');
+        if (!preg_match('~^/(?!/)[A-Za-z0-9_./-]+$~', $base) || str_contains($base, '..')) {
+            throw new \InvalidArgumentException('prastora base must be a site-local pinned asset path');
+        }
+        $modules = $raw['modules'] ?? [];
+        $enhance = $raw['enhance'] ?? [];
+        if (!is_array($modules) || !array_is_list($modules) || !is_array($enhance) || !array_is_list($enhance)) {
+            throw new \InvalidArgumentException('prastora modules and enhance must be lists');
+        }
+        $allowed = ['header', 'forms', 'news', 'languages', 'video', 'map'];
+        if (count($modules) !== count(array_unique($modules)) || count($enhance) !== count(array_unique($enhance))) {
+            throw new \InvalidArgumentException('prastora module names must not repeat');
+        }
+        foreach ($modules as $module) {
+            if (!is_string($module) || !in_array($module, $allowed, true)) {
+                throw new \InvalidArgumentException('unknown prastora module');
+            }
+        }
+        foreach ($enhance as $module) {
+            if (!is_string($module) || !in_array($module, ['header', 'video', 'map'], true) || !in_array($module, $modules, true)) {
+                throw new \InvalidArgumentException('prastora enhancement must name an enabled script module');
+            }
+        }
+        return ['base' => $base, 'modules' => $modules, 'enhance' => $enhance];
     }
 
     private function env(Site $site): Environment
