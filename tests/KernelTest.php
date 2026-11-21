@@ -104,7 +104,7 @@ final class KernelTest extends TestCase
         $this->assertStringNotContainsString('src="/assets/prastora-v0.2.0/modules/video.js"', $body);
         $this->assertStringContainsString('data-pr-header', $body);
         $this->assertStringContainsString('data-pr-languages', $body);
-        $this->assertStringContainsString('data-pr-news', $body);
+        $this->assertStringContainsString('data-pr-news data-l="canvas"', $body);
         $this->assertStringContainsString('action="/_ramonak/form/contact"', $body);
         $this->assertStringContainsString('name="_back" value="/adapter-demo"', $body);
         $this->assertStringContainsString('name="website"', $body);

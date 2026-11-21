@@ -64,8 +64,7 @@ existing `languages` list; it does not generate alternate URLs.
 `pr.news` renders entries supplied by Ramonak's `items()` operation,
 which already provides the published text, path, date and ordering.
 The adapter does not create a new publication index or content store.
-Pagination and current-year footer cache rollover need independent
-implementation and tests before #1139 can close.
+News cards have a mandatory title, publication date and summary, plus optional image, category, author, reading time and comment count via `pr.news(entries, options)`. Use `show_image` (default true), `show_category`, `show_author`, `show_reading_time`, `show_comments` (default false). The date label can be supplied as `fields.date_label` while `datetime` retains the publication date. Cards use explicit Prastora frame coordinates; no auto-fitting CSS grid. Pagination and current-year footer cache rollover still need independent implementation and tests before #1139 can close.
 
 Map and video UI remain optional. Ramonak already rewrites YouTube
 iframed content to a lazy link: **do not enable both** Ramonak's video

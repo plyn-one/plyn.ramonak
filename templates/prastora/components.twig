@@ -77,18 +77,34 @@
 </form>
 {% endmacro %}
 
-{% macro news(entries) %}
-<div data-pr-news>
+{# Main news card contract: title, date, summary. Site controls optional metadata. #}
+{% macro news(entries, options) %}
+<div data-pr-news data-l="canvas" data-space="tight">
 {% for item in entries %}
   {% set fields = item.fields|default({}) %}
-  <article class="pr-news__item">
-    {% if fields.date|default('') %}
-      <time datetime="{{ fields.date }}">{{ fields.date }}</time>
-    {% else %}
-      <time datetime="{{ item.published_at|date('Y-m-d') }}">{{ item.published_at|date('Y-m-d') }}</time>
+  {% set col = (loop.index0 % 3) * 4 + 1 %}
+  {% set published = fields.date|default(item.published_at|date('Y-m-d')) %}
+  <article class="pr-news__item" data-x="{{ col }}-{{ col + 3 }}" data-xp="1-4" data-xw="{{ col }}-{{ col + 3 }}">
+    {% if options.show_image|default(true) and fields.image|default('') %}
+      <img class="pr-news__image" src="{{ fields.image }}" alt="{{ fields.image_alt|default('') }}" loading="lazy">
     {% endif %}
+    <div class="pr-news__meta">
+      {% if options.show_category|default(false) and fields.category|default('') %}
+        <span class="pr-news__category">{{ fields.category }}</span>
+      {% endif %}
+      <time datetime="{{ published }}">{{ fields.date_label|default(published) }}</time>
+    </div>
     <h2><a href="{{ item.path }}">{{ fields.title|default(item.key) }}</a></h2>
-    {% if fields.description|default('') %}<p>{{ fields.description }}</p>{% endif %}
+    <p class="pr-news__summary">{{ fields.description|default(fields.summary|default('')) }}</p>
+    {% if options.show_author|default(false) and fields.author|default('') %}
+      <p class="pr-news__byline">{{ fields.author }}</p>
+    {% endif %}
+    {% if options.show_reading_time|default(false) and fields.reading_minutes|default(false) %}
+      <p class="pr-news__byline">{{ fields.reading_minutes }} min read</p>
+    {% endif %}
+    {% if options.show_comments|default(false) and fields.comments_count is defined %}
+      <p class="pr-news__byline">{{ fields.comments_count }} comments</p>
+    {% endif %}
   </article>
 {% endfor %}
 </div>
