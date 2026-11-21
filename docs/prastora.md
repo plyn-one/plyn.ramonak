@@ -1,0 +1,88 @@
+# Optional Prastora adapter for Ramonak (draft contract v1)
+
+Plyń Laba #1139. This document describes the opt-in Twig adapter
+provided by Ramonak. The shared boundaries are defined by Prastora's
+`docs/site-contract.md` (Laba #1124). Existing sites need not opt in.
+
+## Configuration in the site's own site.json
+
+```json
+{
+  "prastora": {
+    "base": "/assets/prastora-v0.2.0",
+    "modules": ["header", "forms", "news", "languages", "video", "map"],
+    "enhance": ["header", "map"]
+  }
+}
+```
+
+The version path here is illustrative, not an assertion that such a release
+exists. The site must pin and install one verified Prastora release and
+serve the selected files under its own domain at `base`.
+No runtime dependency on GitHub, a CDN or another backend is introduced.
+
+`modules` names individual opt-in CSS files. `enhance` selects optional
+JavaScript only for header, video or map; every selected script must have
+its corresponding CSS module. An empty or absent `prastora` means that
+Ramonak renders exactly as it did before. Unknown names, duplicates,
+malformed lists, unsupported enhancers or non-local base URLs fail
+explicitly when the page is rendered, rather than silently loading
+unexpected assets. Asset configuration and the site's own CSS are in its
+owner frame; they are not stored in Prastora or in Ramonak.
+
+## Twig templates
+
+Ramonak already owns the complete `@ramonak/head.twig` fragment.
+Include it once. Import optional UI macros separately:
+
+```twig
+{% import '@ramonak/prastora/components.twig' as pr %}
+<head>
+  {% include '@ramonak/head.twig' %}
+  {{ pr.assets(site.prastora) }}
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  {{ pr.header(site.name, '/', [{'path': '/', 'label': 'Home'}]) }}
+  {{ pr.languages(languages) }}
+  <main>
+    <h1>{{ page.fields.title }}</h1>
+    {{ pr.news(items('news', {'limit': 20, 'order': 'date'})) }}
+    {{ pr.form('contact', site.forms.contact, site.lang, page.path) }}
+  </main>
+</body>
+```
+
+The site's brand, navigation labels, composition and styles remain its
+own. `site.forms` exposes only form titles, fields and honeypot names,
+not recipients or mail settings. `pr.form` submits to the existing
+`/_ramonak/form/<name>` endpoint using `_back` for return navigation.
+Ramonak still validates data, enforces the honeypot and rate limit,
+stores entries and sends notifications. `pr.languages` consumes the
+existing `languages` list; it does not generate alternate URLs.
+
+`pr.news` renders entries supplied by Ramonak's `items()` operation,
+which already provides the published text, path, date and ordering.
+The adapter does not create a new publication index or content store.
+Pagination and current-year footer cache rollover need independent
+implementation and tests before #1139 can close.
+
+Map and video UI remain optional. Ramonak already rewrites YouTube
+iframed content to a lazy link: **do not enable both** Ramonak's video
+handler and the Prastora video enhancer for the same player. MapLibre
+assets must remain absent until a visitor opts to load the map.
+
+## Verification
+
+The example implementation lives at
+`examples/sites/example/templates/prastora-demo.twig`.
+`tests/KernelTest.php` checks that canonical metadata remains singular,
+the selected modules load, unused scripts do not, language links are
+rendered, and forms retain the existing processing endpoint and
+honeypot. Config validation has negative test cases.
+
+These tests prove only the adapter's HTML contracts. The full acceptance
+of #1139 also needs browser-based responsive and accessibility checks,
+published news pagination, staging noindex, correct footer-year rollover,
+a second backend without Ramonak, and a verified pinned release.
+Those are not yet claimed as passing.

@@ -18,7 +18,7 @@ queue, releases. Outside, and never in this repository:
 
 ## Site composition with Prastora (target contract)
 
-The shared target contract for the layout/core, opt-in UI modules, optional Ramonak adapter and site-owned design is maintained in [Prastora's site-contract.md](https://github.com/plyn-one/plyn.prastora/blob/main/docs/site-contract.md) (Plyń Laba #1124). This architecture remains the authority for Ramonak's existing publishing, language routing, content, form handling and SEO implementation. The Prastora contract does not change runtime behavior before the associated adapter/tests (#1139) and checker/modules (#1129/#1134) are implemented. An individual site pins compatible releases and keeps its templates and CSS in its own owner's frame.
+The shared target contract for the layout/core, opt-in UI modules, optional Ramonak adapter and site-owned design is maintained in [Prastora's site-contract.md](https://github.com/plyn-one/plyn.prastora/blob/main/docs/site-contract.md). Ramonak's opt-in template adapter is documented in [prastora.md](prastora.md) (Plyń Laba #1124). This architecture remains the authority for Ramonak's existing publishing, language routing, content, form handling and SEO implementation. The Prastora contract does not change runtime behavior before the associated adapter/tests (#1139) and checker/modules (#1129/#1134) are implemented. An individual site pins compatible releases and keeps its templates and CSS in its own owner's frame.
 
 ## 2. Runtime
 

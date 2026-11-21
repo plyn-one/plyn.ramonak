@@ -12,6 +12,7 @@
 "file:LICENSE" = "the MIT License of the engine"
 "dir:docs" = "the design of the engine"
 "file:docs/architecture.md" = "the architecture of the first slice and the seams for growth: kernel and modules, data, operations, agents through Klučnik, rendering and SEO, translation, queue, releases"
+"file:docs/prastora.md" = "optional agent-facing Twig Prastora adapter: selected modules, existing SEO head, language links, forms and news"
 "file:composer.json" = "the engine's PHP dependencies (Twig) and autoloading; composer install builds vendor/"
 "file:samapravierka.ts" = "the place's own tests as the test account runs them on every push: composer install, then phpunit, with a static PHP and Composer of pinned versions, each held to its SHA-256, where no PHP 8.2 with pdo_sqlite and mbstring is on the PATH"
 "file:composer.lock" = "the exact versions of the dependencies"
