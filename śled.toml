@@ -148,3 +148,9 @@ faza = "ściah"
 "cełaść" = 0
 adras = [2,2]
 vynik = "redirect.delete removes a redirect: its path then answers 404, as if it had never been, and a path that leads to an item is refused as not_a_redirect. By the owner of Legal Status, 17 November 2026: addresses changed on a site still closed to indexing need no redirect; only the addresses of an old site that was public keep theirs."
+
+[[zapis]]
+faza = "ściah"
+"cełaść" = 0
+adras = [3,2]
+vynik = "This śled.toml is frozen. Its continuation is journal_zapis in the Klučnik D1 database of frame plyn-one, for plyn-one/plyn.ramonak."
