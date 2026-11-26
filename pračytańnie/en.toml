@@ -85,7 +85,7 @@
 "dir:src/Media" = "the images of the media library: one AVIF per image, smaller copies on request, the markup of images in pages"
 "file:src/Media/Codec.php" = "what turns an image of any common format into the AVIF a site keeps"
 "file:src/Media/AvifCodec.php" = "Imagick reads (JPEG, PNG, WebP, AVIF, GIF, HEIC), turns the image upright, strips its metadata and scales it; GD writes AVIF"
-"file:src/Media/Images.php" = "smaller copies from a fixed ladder of widths made on first request into a cache that cleans itself; an img of the library in a page gets srcset, sizes, width, height, lazy loading and its alt; image() for templates"
+"file:src/Media/Images.php" = "smaller copies from a fixed ladder of widths made on first request into a cache that cleans itself; an img of the library in a page gets srcset, sizes (its own, else its width, else the size the site declares for the images of its text in site.json media.sizes), width, height, lazy loading and its alt; image() for templates"
 "file:tests/MediaTest.php" = "the media library end to end with a codec that writes PNG: one file per image, copies on request, the markup of images, the cleaning of the cache"
 "file:migrations/003-video.sql" = "videos of other services shown in pages: their title and the cover kept in the media library"
 "file:src/Media/Videos.php" = "a YouTube iframe in a page becomes a cover and a link, the player (youtube-nocookie.com) put in place only on a click by the site's script; the job video.cover fetches the title and the cover once into the media library"

@@ -70,9 +70,16 @@ final class Renderer
             $html = $this->videos->rewrite($html, $site->id, $lang);
         }
         if ($this->images !== null) {
-            $html = $this->images->rewrite($html, $site->id, $lang);
+            $html = $this->images->rewrite($html, $site->id, $lang, self::imageSizes($site));
         }
         return ['html' => $html, 'deps' => array_keys($this->deps)];
+    }
+
+    /** The size the site declares for the images of its text (site.json media.sizes), as an img's sizes attribute; null for none. */
+    private static function imageSizes(Site $site): ?string
+    {
+        $sizes = $site->declaration['media']['sizes'] ?? null;
+        return is_string($sizes) && trim($sizes) !== '' ? trim($sizes) : null;
     }
 
     public function notFound(Site $site, string $lang): string
@@ -396,7 +403,7 @@ final class Renderer
         // image('/media/ab/<sha>.avif', {sizes: '20rem', class: '...'}): the full img of a library image, as rewrite() makes it
         $twig->addFunction(new TwigFunction('image', function (array $context, string $src, array $attrs = []) use ($site): string {
             $attrs = array_map('strval', $attrs);
-            return $this->images?->tag($site->id, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $src, $attrs)
+            return $this->images?->tag($site->id, (string) ($context['site']['lang'] ?? $site->defaultLanguage), $src, $attrs, self::imageSizes($site))
                 ?? '<img src="' . htmlspecialchars($src, ENT_QUOTES) . '" alt="' . htmlspecialchars($attrs['alt'] ?? '', ENT_QUOTES) . '">';
         }, ['needs_context' => true, 'is_safe' => ['html']]));
         $twig->addFunction(new TwigFunction('prastora_news_page', function (array $context, int $perPage = 10) use ($site): array {

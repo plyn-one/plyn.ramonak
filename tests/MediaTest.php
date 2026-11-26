@@ -134,6 +134,20 @@ final class MediaTest extends TestCase
         $this->assertStringContainsString('<img src="/assets/logo.svg" alt="Лого">', $html, 'what is not of the library stays as it is');
     }
 
+    public function testASiteNamesTheSizeOfItsTextImagesAndAQuotedValueMayHoldAnAngle(): void
+    {
+        $path = $this->op('media.add', ['data_base64' => base64_encode(self::png(1000, 500))])['path'];
+        $html = '<p><img src="' . $path . '" alt="Одно"></p><p><img src="' . $path . '" sizes="(width >= 50rem) 50vw, 100vw" alt="a > b"> after</p>';
+        $out = $this->k->images->rewrite($html, $this->site->id, 'ru', '(min-width: 50rem) 55vw, 91vw');
+        $this->assertStringContainsString('alt="Одно" srcset=', $out);
+        $this->assertStringContainsString('sizes="(min-width: 50rem) 55vw, 91vw" width="1000"', $out, 'the size the site declares for the images of its text');
+        $this->assertStringContainsString('sizes="(width &gt;= 50rem) 50vw, 100vw" alt="a &gt; b" srcset=', $out, 'a \'>\' in a quoted value does not end the tag, and a size of its own stays');
+        $this->assertStringContainsString('decoding="async"> after</p>', $out, 'nothing of the tag is left as text');
+        $this->assertSame(2, substr_count($out, 'srcset='));
+        $this->assertStringContainsString('sizes="(width &lt;= 50em) 100vw, 50rem"', $this->k->images->rewrite('<img src="' . $path . '" alt="">', $this->site->id, 'ru'),
+            'without a declared size, the text column of 50rem');
+    }
+
     public function testTheCacheOfCopiesCleansItselfOfWhatWasAskedLongestAgo(): void
     {
         $base = $this->dir . '/public/media';

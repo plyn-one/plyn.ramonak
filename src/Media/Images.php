@@ -53,25 +53,30 @@ final class Images
         return new Response(200, $bytes, ['Content-Type' => 'image/avif', 'Cache-Control' => 'public, max-age=31536000, immutable']);
     }
 
-    /** Every img of a library file in a rendered page, without srcset of its own, gets its full markup. */
-    public function rewrite(string $html, int $siteId, string $lang): string
+    /**
+     * Every img of a library file in a rendered page, without srcset of its own, gets its full markup; $sizes is the size the
+     * site declares for the images of its text (site.json media.sizes). A tag ends at the first '>' outside its quoted values,
+     * so a value may hold '>', as a media query of sizes does.
+     */
+    public function rewrite(string $html, int $siteId, string $lang, ?string $sizes = null): string
     {
-        return (string) preg_replace_callback('~<img\b[^>]*>~i', function (array $m) use ($siteId, $lang): string {
+        return (string) preg_replace_callback('~<img\b(?:[^>"\']++|"[^"]*+"|\'[^\']*+\')*+>~i', function (array $m) use ($siteId, $lang, $sizes): string {
             $attrs = self::attributes($m[0]);
             if (isset($attrs['srcset']) || !preg_match(self::MASTER, $attrs['src'] ?? '')) {
                 return $m[0];
             }
-            return $this->tag($siteId, $lang, $attrs['src'], $attrs) ?? $m[0];
+            return $this->tag($siteId, $lang, $attrs['src'], $attrs, $sizes) ?? $m[0];
         }, $html);
     }
 
     /**
      * The img of a library file: src the largest copy up to 1280 px, srcset every copy up to the file's own width, sizes as given
-     * (else the width the img is given, else the width of the text column), width and height of the file (or in its proportion
-     * to a given width), lazy loading, and the alt of the file in this language when the img has none.
+     * (else the width the img is given, else the size the site declares for the images of its text, else the width of a text
+     * column of 50rem), width and height of the file (or in its proportion to a given width), lazy loading, and the alt of the
+     * file in this language when the img has none.
      * @param array<string,string> $attrs
      */
-    public function tag(int $siteId, string $lang, string $src, array $attrs = []): ?string
+    public function tag(int $siteId, string $lang, string $src, array $attrs = [], ?string $sizes = null): ?string
     {
         if (!preg_match(self::MASTER, $src, $m)) {
             return null;
@@ -93,7 +98,7 @@ final class Images
         $given = isset($attrs['width']) && ctype_digit((string) $attrs['width']) ? (int) $attrs['width'] : null;
         $attrs['src'] = $url($fallback ? end($fallback) : $widths[0]);
         $attrs['srcset'] = implode(', ', array_map(fn ($x) => $url($x) . ' ' . min($x, $w) . 'w', $widths));
-        $attrs['sizes'] ??= $given !== null ? $given . 'px' : '(width <= 50em) 100vw, 50rem';
+        $attrs['sizes'] ??= $given !== null ? $given . 'px' : ($sizes ?? '(width <= 50em) 100vw, 50rem');
         $attrs['width'] = (string) ($given ?? $w);
         if (!isset($attrs['height']) || $given !== null && !ctype_digit((string) $attrs['height'])) {
             $attrs['height'] = (string) (int) round(($given ?? $w) * $h / max(1, $w));
